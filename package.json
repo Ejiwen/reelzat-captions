@@ -1,0 +1,34 @@
+{
+  "name": "reelzy-captions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Burns broadcast-quality Arabic captions over a video file, driven by a local captions.json",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render Captioned out/final.mp4 --props='{\"mode\":\"burn\"}'",
+    "render:alpha": "remotion render Captioned out/overlay.mov --props='{\"mode\":\"alpha\"}' --codec=prores --prores-profile=4444 --image-format=png --pixel-format=yuva444p10le",
+    "render:webm": "remotion render Captioned out/overlay.webm --props='{\"mode\":\"alpha\"}' --codec=vp8 --pixel-format=yuva420p --image-format=png",
+    "preview": "remotion render Captioned out/preview.mp4 --frames=0-150",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.498",
+    "@remotion/google-fonts": "^4.0.498",
+    "@remotion/layout-utils": "^4.0.498",
+    "@remotion/media-parser": "^4.0.498",
+    "@remotion/motion-blur": "^4.0.498",
+    "culori": "^4.0.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "remotion": "^4.0.498",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/culori": "^4.0.1",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3"
+  }
+}
