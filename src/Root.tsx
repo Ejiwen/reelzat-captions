@@ -8,6 +8,7 @@ import type { ReelsManifest } from "./ingest/manifest";
 import { CaptionLongDemo } from "./overlays/CaptionLong/demo";
 import { CaptionShortDemo } from "./overlays/CaptionShort/demo";
 import { HookDemo } from "./overlays/Hook/demo";
+import { HookBgDemo } from "./overlays/HookBg/demo";
 import { NameplateDemo } from "./overlays/Nameplate/demo";
 import { SafeAreaDemo } from "./overlays/SafeArea/demo";
 import {
@@ -90,6 +91,7 @@ export const RemotionRoot: React.FC = () => {
 
       <Folder name="Components">
         <Composition id="Hook-Demo" component={HookDemo} {...DEMO} />
+        <Composition id="HookBg-Demo" component={HookBgDemo} {...DEMO} />
         <Composition id="CaptionShort-Demo" component={CaptionShortDemo} {...DEMO} />
         <Composition id="CaptionLong-Demo" component={CaptionLongDemo} {...DEMO} />
         <Composition id="Nameplate-Demo" component={NameplateDemo} {...DEMO} />

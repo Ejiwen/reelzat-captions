@@ -1,7 +1,7 @@
 import { fitText } from "@remotion/layout-utils";
 import React, { useMemo } from "react";
 import { useVideoConfig } from "remotion";
-import { fontFamily } from "../../design/fonts";
+import { fontFamily, reelTypography } from "../../design/fonts";
 import { overlayType, spacing, typeScale } from "../../design/tokens";
 import { tokenizeLine } from "../../schema/captions";
 import { CaptionLines } from "../CaptionLines";
@@ -46,7 +46,7 @@ export const CaptionShort: React.FC<CaptionShortProps> = ({
       text,
       withinWidth: maxLineWidth,
       fontFamily,
-      fontWeight: typeScale.fontWeight,
+      fontWeight: reelTypography.caption,
       validateFontIsLoaded: true,
     });
     return Math.min(baseSize, fitted.fontSize * 0.98);

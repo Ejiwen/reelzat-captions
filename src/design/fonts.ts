@@ -1,23 +1,61 @@
-import { loadFont } from "@remotion/google-fonts/NotoKufiArabic";
 import { useEffect, useState } from "react";
-import { cancelRender, continueRender, delayRender } from "remotion";
+import { cancelRender, continueRender, delayRender, staticFile } from "remotion";
 
-// Loading starts at module scope so the fetch begins before the first frame
-// is requested. Rendering is gated on waitForFonts() (see CaptionedVideo) so
-// frame 0 never rasterises in a fallback font.
-const { fontFamily, waitUntilDone } = loadFont("normal", {
-  weights: ["500", "700"],
-  subsets: ["arabic", "latin"],
-});
+// The font files are bundled with the project so Studio and headless renders
+// produce identical typography without relying on fonts installed on the host.
+export const fontFamily = "Thmanyah Sans";
 
-export { fontFamily };
+export const fontWeights = {
+  light: 300,
+  regular: 400,
+  medium: 500,
+  bold: 700,
+  black: 900,
+} as const;
 
-export const waitForFonts = (): Promise<void> => waitUntilDone().then(() => undefined);
+// Semantic assignments keep hierarchy consistent across every reel.
+export const reelTypography = {
+  hook: fontWeights.black,
+  caption: fontWeights.bold,
+  asrSubtitle: fontWeights.medium,
+  nameplateChannel: fontWeights.bold,
+  nameplateEpisode: fontWeights.regular,
+} as const;
+
+const faces = [
+  { weight: fontWeights.light, file: "thmanyahsans-Light.woff2" },
+  { weight: fontWeights.regular, file: "thmanyahsans-Regular.woff2" },
+  { weight: fontWeights.medium, file: "thmanyahsans-Medium.woff2" },
+  { weight: fontWeights.bold, file: "thmanyahsans-Bold.woff2" },
+  { weight: fontWeights.black, file: "thmanyahsans-Black.woff2" },
+] as const;
+
+let fontPromise: Promise<void> | null = null;
+
+export const waitForFonts = (): Promise<void> => {
+  if (fontPromise) {
+    return fontPromise;
+  }
+
+  fontPromise = Promise.all(
+    faces.map(async ({ weight, file }) => {
+      const face = new FontFace(
+        fontFamily,
+        `url(${staticFile(`fonts/thmanyah-sans/${file}`)}) format("woff2")`,
+        { style: "normal", weight: String(weight) },
+      );
+      await face.load();
+      document.fonts.add(face);
+    }),
+  ).then(() => undefined);
+
+  return fontPromise;
+};
 
 // Convenience gate for compositions that have no other data to load (e.g. the
-// component demos): blocks the first frame until the caption font is ready.
+// component demos): blocks the first frame until every used weight is ready.
 export const useFontGate = (): void => {
-  const [handle] = useState(() => delayRender("Loading caption font"));
+  const [handle] = useState(() => delayRender("Loading Thmanyah Sans fonts"));
   useEffect(() => {
     waitForFonts()
       .then(() => continueRender(handle))

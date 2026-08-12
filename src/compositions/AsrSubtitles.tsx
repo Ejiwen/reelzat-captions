@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import { fontFamily } from "../design/fonts";
+import { fontFamily, reelTypography } from "../design/fonts";
 import { palette, textShadow, typeScale } from "../design/tokens";
 import { msToFrame } from "../captions/useActiveSegment";
 import type { WordTiming } from "../schema/captions";
@@ -65,7 +65,7 @@ export const AsrSubtitles: React.FC<{
         textAlign: "center",
         direction,
         fontFamily,
-        fontWeight: 500,
+        fontWeight: reelTypography.asrSubtitle,
         fontSize: width * 0.03 * fontScale,
         lineHeight: typeScale.lineHeight,
         color: palette.muted,

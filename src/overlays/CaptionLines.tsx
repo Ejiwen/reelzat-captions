@@ -1,7 +1,7 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Word } from "../captions/Word";
-import { fontFamily } from "../design/fonts";
+import { fontFamily, reelTypography } from "../design/fonts";
 import { palette, spacing, textShadow, typeScale } from "../design/tokens";
 import { staggeredWordStyle } from "./wordStagger";
 
@@ -42,7 +42,7 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
         direction,
         textAlign: "center",
         fontFamily,
-        fontWeight: typeScale.fontWeight,
+        fontWeight: reelTypography.caption,
         fontSize,
         lineHeight: typeScale.lineHeight,
         color: palette.ink,

@@ -2,7 +2,7 @@ import { fitText } from "@remotion/layout-utils";
 import { Trail } from "@remotion/motion-blur";
 import React, { useMemo } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
-import { fontFamily } from "../design/fonts";
+import { fontFamily, reelTypography } from "../design/fonts";
 import { spacing, textShadow, typeScale } from "../design/tokens";
 import type { Theme } from "../themes";
 import { msToFrame, type ActiveSegment } from "./useActiveSegment";
@@ -68,7 +68,7 @@ const PageContent: React.FC<PageProps> = ({
         text,
         withinWidth: maxLineWidth,
         fontFamily,
-        fontWeight: typeScale.fontWeight,
+        fontWeight: reelTypography.caption,
       });
       size = Math.min(size, fitted.fontSize);
     }
@@ -89,7 +89,7 @@ const PageContent: React.FC<PageProps> = ({
         direction: "rtl",
         textAlign: "center",
         fontFamily,
-        fontWeight: typeScale.fontWeight,
+        fontWeight: reelTypography.caption,
         fontSize,
         lineHeight: typeScale.lineHeight,
         textShadow,

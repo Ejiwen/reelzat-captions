@@ -12,15 +12,20 @@ Its vertical placement is controlled globally by `config.ts`:
 
 ```ts
 export const hookConfig = {
+  fontSizeScale: 1, // 1.15 = 15% larger; 0.9 = 10% smaller
   yPct: 65, // 0 = top, 50 = frame centre, 100 = bottom
   bandHeightPct: 24,
   extraHoldSeconds: 2, // added steady reading time; motion is unchanged
 };
 ```
 
-Change `yPct` to move every hook vertically. Change `extraHoldSeconds` to add
-or remove steady reading time between the entrance and exit without changing
-either animation.
+Change `fontSizeScale` to resize only the hook, `yPct` to move every hook
+vertically, and `extraHoldSeconds` to add or remove steady reading time between
+the entrance and exit without changing either animation.
+
+`background` controls the cinematic veil rendered by `../HookBg`: toggle it,
+resize it, and tune its navy strength, gold glow, blur, and entrance motion
+from the same hook config file.
 
 Pure props-in, pixels-out: no file access, no package knowledge. Liftable
 into any Remotion project together with `src/motion/` and `src/design/`.

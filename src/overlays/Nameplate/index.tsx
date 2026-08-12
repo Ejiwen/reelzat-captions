@@ -1,6 +1,6 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
-import { fontFamily } from "../../design/fonts";
+import { fontFamily, reelTypography } from "../../design/fonts";
 import { overlaySurfaces, overlayType, palette, typeScale } from "../../design/tokens";
 import { OverlayRoot } from "../OverlayRoot";
 import type { OverlayBaseProps, OverlayWindow } from "../types";
@@ -64,7 +64,7 @@ export const Nameplate: React.FC<NameplateProps> = ({
         <div
           style={{
             fontSize: channelSize,
-            fontWeight: typeScale.fontWeight,
+            fontWeight: reelTypography.nameplateChannel,
             color: palette.ink,
           }}
         >
@@ -74,7 +74,7 @@ export const Nameplate: React.FC<NameplateProps> = ({
           <div
             style={{
               fontSize: episodeSize,
-              fontWeight: 500,
+              fontWeight: reelTypography.nameplateEpisode,
               color: palette.muted,
             }}
           >

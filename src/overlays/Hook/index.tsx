@@ -1,7 +1,7 @@
 import { fitText } from "@remotion/layout-utils";
 import React, { useMemo } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
-import { fontFamily } from "../../design/fonts";
+import { fontFamily, reelTypography } from "../../design/fonts";
 import {
   overlaySurfaces,
   overlayType,
@@ -11,6 +11,7 @@ import {
   typeScale,
 } from "../../design/tokens";
 import { tokenizeLine } from "../../schema/captions";
+import { HookBg } from "../HookBg";
 import { OverlayRoot } from "../OverlayRoot";
 import { DEFAULT_SAFE_AREA, type OverlayBaseProps, type OverlayTextZone } from "../types";
 import { hookExitProgress, hookWordStyle, shimmerStyle, underlineSweep } from "./animations";
@@ -53,7 +54,8 @@ export const Hook: React.FC<HookProps> = ({
     position,
   };
 
-  const baseSize = width * overlayType.hookSizeFactor * fontScale;
+  const baseSize =
+    width * overlayType.hookSizeFactor * fontScale * Math.max(0.1, hookConfig.fontSizeScale);
   const maxLineWidth = width * spacing.maxLineWidthFraction;
 
   // Fit on one line when possible; long hooks shrink to 0.7× base, then wrap
@@ -66,7 +68,7 @@ export const Hook: React.FC<HookProps> = ({
       text: data.text,
       withinWidth: maxLineWidth,
       fontFamily,
-      fontWeight: typeScale.fontWeight,
+      fontWeight: reelTypography.hook,
       validateFontIsLoaded: true,
     });
     const size = Math.max(
@@ -91,15 +93,22 @@ export const Hook: React.FC<HookProps> = ({
       textZone={configuredTextZone}
       reduced={reduced}
     >
+      <HookBg
+        windowStartFrame={window.startFrame}
+        exitProgress={exitProgress}
+        settings={hookConfig.background}
+        reduced={reduced}
+      />
       <div
         style={{
           position: "relative",
+          zIndex: 1,
           maxWidth: oneLine ? undefined : maxLineWidth,
           whiteSpace: oneLine ? "nowrap" : undefined,
           textAlign: "center",
           textWrap: oneLine ? undefined : "balance",
           fontFamily,
-          fontWeight: typeScale.fontWeight,
+          fontWeight: reelTypography.hook,
           fontSize,
           lineHeight: typeScale.lineHeight,
           color: palette.ink,
@@ -148,6 +157,8 @@ export const Hook: React.FC<HookProps> = ({
       </div>
       <div
         style={{
+          position: "relative",
+          zIndex: 1,
           height: Math.max(4, fontSize * 0.09),
           width: fontSize * 3.2,
           borderRadius: 999,
