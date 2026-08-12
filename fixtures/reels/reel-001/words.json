@@ -1,0 +1,17 @@
+{
+  "words": [
+    { "text": "في", "startMs": 200, "endMs": 400 },
+    { "text": "بداية", "startMs": 400, "endMs": 900 },
+    { "text": "القرن", "startMs": 900, "endMs": 1350 },
+    { "text": "الماضي", "startMs": 1350, "endMs": 1900 },
+    { "text": "كانت", "startMs": 2100, "endMs": 2500 },
+    { "text": "المنطقة", "startMs": 2500, "endMs": 3100 },
+    { "text": "كلها", "startMs": 3100, "endMs": 3500 },
+    { "text": "دولة", "startMs": 3500, "endMs": 3950 },
+    { "text": "واحدة", "startMs": 3950, "endMs": 4500 },
+    { "text": "ثم", "startMs": 4800, "endMs": 5100 },
+    { "text": "تغير", "startMs": 5100, "endMs": 5600 },
+    { "text": "كل", "startMs": 5600, "endMs": 5850 },
+    { "text": "شيء", "startMs": 5850, "endMs": 6400 }
+  ]
+}

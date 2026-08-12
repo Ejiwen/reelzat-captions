@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "clipId": "asr-001",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "durationInSeconds": 30.0,
+  "aspect": "9:16",
+  "language": "ar",
+  "direction": "rtl",
+  "title": "مقطع بتفريغ آلي",
+  "words": [],
+  "captions": [],
+  "segments": [],
+  "cuts": [],
+  "safeArea": { "topPct": 14, "bottomPct": 18, "sidePct": 7 }
+}

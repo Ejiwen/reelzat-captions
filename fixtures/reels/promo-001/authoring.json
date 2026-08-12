@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "provenance": "video-watcher",
+  "kind": "promo",
+  "clipId": "promo-001",
+  "reelId": 0,
+  "rank": 0,
+  "title": "برومو الحلقة",
+  "source": {
+    "url": "https://www.youtube.com/watch?v=fixture",
+    "platform": "youtube",
+    "videoId": "fixture",
+    "episodeTitle": "مأساة حاضرة دارفور",
+    "channel": "أسمار وأفكار",
+    "language": "ar",
+    "direction": "rtl"
+  },
+  "hook": {
+    "text": "القصة الكاملة في الحلقة الجديدة",
+    "position": "top",
+    "display": { "start": 0.0, "end": 4.0 }
+  },
+  "captions": [],
+  "publish": {
+    "suggestedReelTitle": "الحلقة الجديدة 🔥",
+    "postText": "القصة الكاملة في الحلقة الجديدة — الرابط في البايو.",
+    "hashtags": ["#بودكاست"]
+  },
+  "whyItWorks": "دعوة مباشرة لمشاهدة الحلقة.",
+  "keyQuote": "القصة الكاملة في الحلقة الجديدة",
+  "teaserReason": "أقوى لحظة تشويق في الحلقة دون حرق الأحداث."
+}

@@ -1,0 +1,257 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { join } from "node:path";
+import { discoverReels, loadReelPackageFromDisk } from "../src/ingest/node";
+import { resolveReelPackage, secondsToFrames } from "../src/ingest/resolve";
+
+const fixturesDir = join(__dirname, "..", "fixtures", "reels");
+
+// ---------------------------------------------------------------------------
+// Building blocks
+
+const validSidecar = (overrides: Record<string, unknown> = {}) => ({
+  schemaVersion: 2,
+  clipId: "reel-x",
+  width: 1080,
+  height: 1920,
+  fps: 30,
+  durationInSeconds: 22,
+  language: "ar",
+  direction: "rtl",
+  captionSource: "authored",
+  authoring: null,
+  words: [],
+  captions: [],
+  segments: [],
+  cuts: [],
+  safeArea: { topPct: 14, bottomPct: 20, sidePct: 7 },
+  ...overrides,
+});
+
+const validAuthoring = (overrides: Record<string, unknown> = {}) => ({
+  schemaVersion: 1,
+  provenance: "video-watcher",
+  kind: "reel",
+  clipId: "reel-x",
+  title: "عنوان",
+  source: {
+    episodeTitle: "حلقة",
+    channel: "قناة",
+    language: "ar",
+    direction: "rtl",
+  },
+  hook: { text: "خطاف قوي", position: "top", display: { start: 0, end: 3 } },
+  captions: [
+    {
+      type: "short_1line",
+      lines: ["سطر واحد قصير"],
+      position: "top",
+      display: { start: 12, end: 15 },
+    },
+  ],
+  ...overrides,
+});
+
+const asrCaptions = {
+  version: 1,
+  language: "ar",
+  segments: [
+    {
+      id: "seg-001",
+      startMs: 0,
+      endMs: 1000,
+      text: "كلمة أولى",
+      words: [
+        { text: "كلمة", startMs: 0, endMs: 500 },
+        { text: "أولى", startMs: 500, endMs: 1000 },
+      ],
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Seconds → frames (the one conversion point)
+
+test("secondsToFrames: 26.72 s @ 30 fps → 801 frames", () => {
+  assert.equal(secondsToFrames(26.72, 30), 801);
+});
+
+test("authored display windows convert to frames exactly once, at ingest", () => {
+  const pkg = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar({ durationInSeconds: 26.72 }),
+    authoring: validAuthoring(),
+  });
+  assert.equal(pkg.media.durationInFrames, 801);
+  assert.deepEqual(pkg.authored?.hook.window, { startFrame: 0, endFrame: 90 });
+  assert.deepEqual(pkg.authored?.captions[0]?.window, { startFrame: 360, endFrame: 450 });
+});
+
+// ---------------------------------------------------------------------------
+// Discriminator
+
+test("missing captionSource defaults to asr (v1 packages)", () => {
+  const sidecar = validSidecar({ captionSource: undefined, authoring: undefined });
+  delete (sidecar as Record<string, unknown>)["captionSource"];
+  delete (sidecar as Record<string, unknown>)["authoring"];
+  const pkg = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar,
+    asrCaptions,
+  });
+  assert.equal(pkg.captionSource, "asr");
+  assert.equal(pkg.authored, null);
+  assert.equal(pkg.asr.captions?.segments.length, 1);
+});
+
+test("captionSource authored without authoring data is rejected", () => {
+  assert.throws(
+    () =>
+      resolveReelPackage({
+        clipId: "reel-x",
+        packageDir: "reels/reel-x",
+        sidecar: validSidecar(),
+      }),
+    /captionSource is "authored" but neither/,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Semantic guarantees, validated defensively
+
+test("a promo with captions is rejected", () => {
+  assert.throws(
+    () =>
+      resolveReelPackage({
+        clipId: "reel-x",
+        packageDir: "reels/reel-x",
+        sidecar: validSidecar(),
+        authoring: validAuthoring({ kind: "promo" }),
+      }),
+    /a promo must have zero captions — received 1/,
+  );
+});
+
+test("same-position overlaps and out-of-clip windows are rejected", () => {
+  assert.throws(
+    () =>
+      resolveReelPackage({
+        clipId: "reel-x",
+        packageDir: "reels/reel-x",
+        sidecar: validSidecar({ durationInSeconds: 14 }),
+        authoring: validAuthoring({
+          captions: [
+            {
+              type: "short_1line",
+              lines: ["سطر"],
+              position: "top",
+              display: { start: 2.0, end: 5.0 }, // overlaps the hook (top, 0–3)
+            },
+            {
+              type: "long_2lines",
+              lines: ["سطر أول", "سطر ثانٍ"],
+              position: "bottom",
+              display: { start: 10.0, end: 15.0 }, // past the 14 s clip end
+            },
+          ],
+        }),
+      }),
+    (err: unknown) => {
+      const message = (err as Error).message;
+      assert.match(message, /"hook" and "captions\.0" both sit at position "top" and overlap/);
+      assert.match(message, /captions\.1: display window must sit inside the clip/);
+      return true;
+    },
+  );
+});
+
+test("a malformed package yields one report listing every problem", () => {
+  try {
+    resolveReelPackage({
+      clipId: "reel-x",
+      packageDir: "reels/reel-x",
+      sidecar: validSidecar({ durationInSeconds: 10 }),
+      authoring: validAuthoring({
+        clipId: "reel-WRONG",
+        kind: "promo",
+        hook: { text: "خطاف", position: "top", display: { start: 5, end: 4 } },
+        captions: [
+          {
+            type: "long_2lines",
+            lines: ["سطر واحد فقط"], // long_2lines with 1 line
+            position: "bottom",
+            display: { start: 8, end: 12 }, // beyond the 10 s clip
+          },
+        ],
+      }),
+    });
+    assert.fail("expected resolveReelPackage to throw");
+  } catch (err) {
+    const message = (err as Error).message;
+    assert.match(message, /Invalid reel package "reel-x" — \d+ problems:/);
+    assert.match(message, /clipId mismatch/);
+    assert.match(message, /a promo must have zero captions/);
+    assert.match(message, /hook: display\.end must be greater than display\.start/);
+    assert.match(message, /long_2lines must have exactly 2 lines/);
+    assert.match(message, /display window must sit inside the clip/);
+    // Every problem in ONE throw — at least 5 bullet points.
+    assert.ok(message.split("•").length - 1 >= 5, `expected >= 5 bullets in:\n${message}`);
+  }
+});
+
+test("structurally broken sidecar reports zod issues with file + path", () => {
+  assert.throws(
+    () =>
+      resolveReelPackage({
+        clipId: "reel-x",
+        packageDir: "reels/reel-x",
+        sidecar: { schemaVersion: 2, width: -5, height: 1920, fps: 30 },
+      }),
+    (err: unknown) => {
+      const message = (err as Error).message;
+      assert.match(message, /remotion\.json → width/);
+      assert.match(message, /remotion\.json → durationInSeconds/);
+      return true;
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Fixtures on disk (the committed batch)
+
+test("all four fixture packages load from disk", () => {
+  const { packages, failures, index } = discoverReels(fixturesDir);
+  assert.deepEqual(failures, []);
+  assert.deepEqual(
+    packages.map((p) => p.clipId),
+    ["asr-001", "promo-001", "reel-001", "reel-002"],
+  );
+  assert.equal(index?.mode, "mixed");
+
+  const byId = new Map(packages.map((p) => [p.clipId, p]));
+  assert.equal(byId.get("asr-001")?.captionSource, "asr");
+  assert.equal(byId.get("promo-001")?.kind, "promo");
+  assert.equal(byId.get("promo-001")?.authored?.captions.length, 0);
+  assert.equal(byId.get("reel-001")?.authored?.captions.length, 2);
+  assert.equal(byId.get("reel-002")?.authored?.captions.length, 1);
+});
+
+test("reel-001 fixture matches the acceptance choreography", () => {
+  const pkg = loadReelPackageFromDisk(join(fixturesDir, "reel-001"), "reels/reel-001");
+  assert.equal(pkg.media.durationInFrames, 660); // 22 s @ 30 fps
+  assert.equal(pkg.direction, "rtl");
+  assert.equal(pkg.authored?.channel, "أسمار وأفكار");
+  assert.deepEqual(pkg.authored?.hook.window, { startFrame: 0, endFrame: 90 });
+  const [short, long] = pkg.authored!.captions;
+  assert.equal(short?.type, "short_1line");
+  assert.equal(short?.position, "top");
+  assert.deepEqual(short?.window, { startFrame: 360, endFrame: 450 });
+  assert.equal(long?.type, "long_2lines");
+  assert.equal(long?.position, "bottom");
+  assert.equal(long?.lines.length, 2);
+  assert.deepEqual(long?.window, { startFrame: 480, endFrame: 630 });
+  assert.equal(pkg.asr.words.length, 13);
+  assert.equal(pkg.director?.faces.length, 1);
+});

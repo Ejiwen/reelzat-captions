@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 2,
+  "clipId": "reel-001",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "durationInSeconds": 22.0,
+  "aspect": "9:16",
+  "language": "ar",
+  "direction": "rtl",
+  "title": "أربع دول من دولة واحدة",
+  "hook": "أربع دول خرجت من دولة واحدة",
+  "captionSource": "authored",
+  "authoring": null,
+  "words": [],
+  "captions": [],
+  "segments": [],
+  "cuts": [3.2, 11.5, 15.8],
+  "safeArea": { "topPct": 14, "bottomPct": 20, "sidePct": 7 }
+}

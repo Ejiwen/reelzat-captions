@@ -4,11 +4,16 @@
   "private": true,
   "description": "Burns broadcast-quality Arabic captions over a video file, driven by a local captions.json",
   "scripts": {
+    "discover": "tsx scripts/discover-reels.ts",
+    "prestudio": "npm run discover",
     "studio": "remotion studio",
     "render": "remotion render Captioned out/final.mp4 --props='{\"mode\":\"burn\"}'",
     "render:alpha": "remotion render Captioned out/overlay.mov --props='{\"mode\":\"alpha\"}' --codec=prores --prores-profile=4444 --image-format=png --pixel-format=yuva444p10le",
     "render:webm": "remotion render Captioned out/overlay.webm --props='{\"mode\":\"alpha\"}' --codec=vp8 --pixel-format=yuva420p --image-format=png",
+    "prerender:batch": "npm run discover",
+    "render:batch": "tsx scripts/render-batch.ts",
     "preview": "remotion render Captioned out/preview.mp4 --frames=0-150",
+    "test": "node --import tsx --test tests/ingest.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -24,11 +29,14 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@remotion/bundler": "^4.0.498",
+    "@remotion/renderer": "^4.0.498",
     "@types/culori": "^4.0.1",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "prettier": "^3.9.6",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3"
   }
 }

@@ -112,3 +112,9 @@ out/
 # Video files
 *.mp4
 *.mov
+
+# Reel packages seeded/dropped into public/reels are pipeline artifacts
+public/reels/
+
+# Generated manifest is committed (Root imports it), but keep fixture videos too
+!fixtures/reels/**/*.mp4

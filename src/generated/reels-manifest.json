@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "sourceDir": "public/reels",
+  "reels": [
+    {
+      "id": "asr-001",
+      "dir": "reels/asr-001",
+      "kind": "reel",
+      "captionSource": "asr",
+      "title": "مقطع بتفريغ آلي",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "durationInFrames": 900,
+      "direction": "rtl"
+    },
+    {
+      "id": "promo-001",
+      "dir": "reels/promo-001",
+      "kind": "promo",
+      "captionSource": "authored",
+      "title": "برومو الحلقة",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "durationInFrames": 240,
+      "direction": "rtl"
+    },
+    {
+      "id": "reel-001",
+      "dir": "reels/reel-001",
+      "kind": "reel",
+      "captionSource": "authored",
+      "title": "أربع دول من دولة واحدة",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "durationInFrames": 660,
+      "direction": "rtl"
+    },
+    {
+      "id": "reel-002",
+      "dir": "reels/reel-002",
+      "kind": "reel",
+      "captionSource": "authored",
+      "title": "لماذا ينهار كل شيء فجأة؟",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "durationInFrames": 360,
+      "direction": "rtl"
+    }
+  ]
+}

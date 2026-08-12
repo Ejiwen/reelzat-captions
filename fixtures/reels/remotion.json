@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "mode": "mixed",
+  "source": {
+    "channel": "أسمار وأفكار",
+    "url": "https://www.youtube.com/watch?v=fixture",
+    "episodeTitle": "مأساة حاضرة دارفور",
+    "language": "ar"
+  },
+  "reels": [
+    { "id": "reel-001", "kind": "reel", "captionSource": "authored" },
+    { "id": "reel-002", "kind": "reel", "captionSource": "authored" },
+    { "id": "promo-001", "kind": "promo", "captionSource": "authored" },
+    { "id": "asr-001", "kind": "reel", "captionSource": "asr" }
+  ]
+}

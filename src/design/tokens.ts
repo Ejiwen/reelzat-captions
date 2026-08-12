@@ -51,3 +51,33 @@ export const scrim = {
 };
 
 export const textShadow = "0 2px 12px rgba(0,0,0,0.45)";
+
+// Authored-overlay type + surfaces (hook / captions / nameplate). Factors are
+// relative to composition width, multiplied by fontScale — same convention as
+// typeScale.baseSizePx.
+export const overlayType = {
+  hookSizeFactor: 0.062, // the strongest element on screen
+  captionSizeFactor: 0.052,
+  nameplateChannelSizeFactor: 0.026,
+  nameplateEpisodeSizeFactor: 0.02,
+  // fitText may shrink the hook down to this fraction before wrapping.
+  hookMinFitScale: 0.7,
+} as const;
+
+export const overlaySurfaces = {
+  // Hook accent underline — palette.sky → palette.cyan.
+  accentUnderlineGradient: `linear-gradient(to left, ${palette.sky}, ${palette.cyan})`,
+  // Nameplate chip — palette.navy at 55%.
+  chipBackground: "rgba(11, 31, 58, 0.55)",
+  // Bottom-caption scrim (burn mode only), shorter than the legacy scrim.
+  captionScrimGradient:
+    "linear-gradient(to top, rgba(11,31,58,0.5) 0%, rgba(11,31,58,0.22) 55%, transparent 100%)",
+} as const;
+
+// Entry-window motion blur shared by overlays that move on entry — same
+// numbers as the wordPop theme's trail. Never applied to a static element.
+export const entryTrail = {
+  layers: 3,
+  lagInFrames: 0.5,
+  trailOpacity: 0.6,
+} as const;

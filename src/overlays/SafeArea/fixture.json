@@ -1,0 +1,5 @@
+{
+  "safeArea": { "topPct": 14, "bottomPct": 20, "sidePct": 7 },
+  "textZones": [{ "xPct": 10, "yPct": 62, "wPct": 80, "hPct": 16, "position": "bottom" }],
+  "faceZones": [{ "xPct": 28, "yPct": 22, "wPct": 44, "hPct": 34 }]
+}

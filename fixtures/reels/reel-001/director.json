@@ -1,0 +1,6 @@
+{
+  "faces": [{ "xPct": 30, "yPct": 18, "wPct": 40, "hPct": 30, "startMs": 0, "endMs": 22000 }],
+  "textSafeZones": [],
+  "cuts": [3.2, 11.5, 15.8],
+  "split": null
+}

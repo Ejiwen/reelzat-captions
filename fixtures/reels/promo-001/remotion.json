@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 2,
+  "clipId": "promo-001",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "durationInSeconds": 8.0,
+  "aspect": "9:16",
+  "language": "ar",
+  "direction": "rtl",
+  "title": "برومو الحلقة",
+  "hook": "القصة الكاملة في الحلقة الجديدة",
+  "captionSource": "authored",
+  "authoring": null,
+  "words": [],
+  "captions": [],
+  "segments": [],
+  "cuts": [],
+  "safeArea": { "topPct": 14, "bottomPct": 20, "sidePct": 7 }
+}

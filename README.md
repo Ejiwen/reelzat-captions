@@ -1,113 +1,187 @@
 # reelzy-captions
 
-A single-purpose [Remotion](https://remotion.dev) project that burns broadcast-quality **Arabic captions** over a video file, driven entirely by a local `captions.json`. No transcription, no APIs, no editing — read JSON, draw animated text over video, render.
+The **final motion-graphics stage** of the reels pipeline. Takes the clean
+9:16 clips that `reelzy export-reels` drops into `public/reels/`, overlays the
+authored **hook**, **captions** and **channel nameplate** with
+broadcast-quality motion design, and batch-renders every reel to a
+publish-ready MP4.
+
+```
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────────┐
+│  video-watcher   │    │  reelzy-backend  │    │  THIS REPO           │
+│  (Claude skill)  │───▶│  cut clean 9:16  │───▶│  hook + captions +   │──▶ social
+│  hooks, captions,│    │  clips, export   │    │  nameplate overlays, │    media
+│  publish metadata│    │  packages        │    │  batch render        │
+└──────────────────┘    └──────────────────┘    └──────────────────────┘
+```
 
 ## Quick start
 
 ```sh
 npm i
-npx remotion studio     # open the Studio preview
-npm run render          # burned-in MP4 → out/final.mp4
+npm run studio          # discovery runs first; Reels/, Components/, Legacy/ folders
+npm run render:batch    # render every package in public/reels → out/
+npm test                # ingest unit tests
 ```
 
-The repo ships with a sample `public/video.mp4` (a generated gradient placeholder) and `public/captions.json` so it runs immediately. Replace both with your own files.
+With no packages in `public/reels/`, discovery seeds it from the committed
+`fixtures/reels/` (2 authored reels, 1 promo, 1 asr clip), so the project runs
+immediately. `npm run render:batch -- --frames=0-90` smoke-renders all four.
 
-## The `captions.json` schema
+## The package contract (`public/reels/`)
 
-All timings are **integer milliseconds**. The file is validated on load (`src/schema/captions.ts`) — a malformed file fails fast with a report listing **every** problem, never just the first.
+Each clip is a folder; a batch index sits beside them:
 
-```jsonc
-{
-  "version": 1,               // must be 1
-  "language": "ar",
-  "source": "episode-042.mp4", // optional, informational
-  "segments": [
-    {
-      "id": "seg-001",
-      "startMs": 1200,
-      "endMs": 3480,
-      "text": "الحديث عن التراث الشنقيطي",
-      "words": [
-        { "text": "الحديث",   "startMs": 1200, "endMs": 1690 },
-        { "text": "عن",       "startMs": 1690, "endMs": 1840 },
-        { "text": "التراث",   "startMs": 1840, "endMs": 2510 },
-        { "text": "الشنقيطي", "startMs": 2510, "endMs": 3480 }
-      ],
-      "emphasis": [3]          // optional: word indices rendered in the accent colour
-    }
-  ]
-}
+```
+public/reels/
+  remotion.json                # batch index: schemaVersion 2, mode, source, reels[]
+  reel-001/
+    reel-9x16.mp4              # clean cut, no burned text
+    reel-9x16.m4a              # optional standalone audio
+    remotion.json              # per-clip sidecar (v2) — THE source of truth for
+                               #   width/height/fps/durationInSeconds, language,
+                               #   direction, captionSource, safeArea; may embed
+                               #   authoring/words/captions inline
+    authoring.json             # iff captionSource == "authored" (video-watcher output)
+    words.json / captions.json # ASR word timing / legacy v1 cues (asr mode + subtitles)
+    director.json              # face zones, text-safe zones, cuts, split geometry
+  promo-001/ …
 ```
 
-Rules enforced by the validator:
+- **`captionSource` is the branch key**: `"authored"` renders through
+  `AuthoredReel`, `"asr"` through `AsrCaptioned`. A missing `captionSource`
+  (v1 packages) is treated as `"asr"`.
+- Authored display windows are **clip-relative seconds** (floats). They are
+  converted to frames in exactly one place: `src/ingest/resolve.ts`
+  (`secondsToFrames`, `Math.floor` — 26.72 s @ 30 fps → 801 frames).
+- Everything is zod-validated defensively (`src/ingest/schemas.ts`); a broken
+  package fails with **one report listing every problem**, same style as the
+  legacy captions validator. Upstream guarantees that are still re-checked:
+  ≤2 captions per reel, promo has zero captions, same-position elements never
+  overlap in time, windows sit inside the clip.
+- Media metadata (width/height/fps/duration) comes **from the sidecar, never
+  from probing the video** — batch renders must not re-parse every file.
 
-- Segments sorted by `startMs`, no overlaps.
-- Every word's `endMs >= startMs`, and each word span contained within its segment span.
-- `emphasis` indices must be in range.
+`src/ingest/` is the only code that touches raw package files. It produces
+one typed `ReelPackage` per folder; `scripts/discover-reels.ts` (an npm
+pre-script for `studio` and `render:batch`) scans `public/reels/*/` and writes
+`src/generated/reels-manifest.json`, from which `Root.tsx` registers **one
+composition per reel** (id = clip id) — no filesystem access and no async
+probing at runtime.
 
-Semantics:
+## Component catalog (`src/overlays/`)
 
-- **A segment is one on-screen caption page.** Line breaking is an authoring decision — put a `\n` inside `text` to force a break. There is no automatic re-grouping (Arabic breaks badly under it).
-- **`text` is the authoritative display string**; `words` only drive per-word timing. If they disagree, `text` wins, a warning is logged, and timings are distributed across the tokens of `text`.
+Folder-per-component; each folder ships `index.tsx`, `animations.ts` (its
+enter/exit defaults), `README.md`, `fixture.json`, and a `demo.tsx` registered
+under **Components/** in Studio so it can be previewed and tuned in isolation.
 
-## Composition props (live controls in Studio)
+| Component | Role |
+| --- | --- |
+| `Hook/` | The opening statement — largest type, accent underline sweep, `blurIn` (+ 0.94 springPop scale) entrance, quick `dipExit`. Reads within its first 3 words. |
+| `CaptionShort/` | One big authored line, auto-fit, never wrapped. Word-stagger entrance. |
+| `CaptionLong/` | Exactly two balanced lines, one font size for both, flat word-stagger across the break. |
+| `Nameplate/` | Channel + episode title chip in the safe-area corner. Enters as the hook exits; yields (fades out) while a caption shares its band. |
+| `SafeArea/` | Debug guides: safe-area bands, director text/face zones, per-overlay window timeline. |
 
-| Prop | Default | Range | Purpose |
-| --- | --- | --- | --- |
-| `videoSrc` | `video.mp4` | | file in `public/` |
-| `captionsSrc` | `captions.json` | | file in `public/` |
-| `theme` | `karaoke` | `karaoke` \| `wordPop` | caption animation style |
-| `mode` | `burn` | `burn` \| `alpha` | see render modes below |
-| `offsetMs` | `0` | −1000…1000 | shifts **every** caption timestamp globally — fix sync drift without re-editing the JSON |
-| `fontScale` | `1` | 0.7…1.4 | multiplies the base caption size |
-| `safeAreaBottomPct` | `18` | 5…40 | caption baseline distance from the bottom, as % of frame height |
-| `debug` | `false` | | overlays segment id, active word index and the safe-area boundary |
+Overlays are **pure props-in, pixels-out** — they take
+`{ data, window: {startFrame, endFrame}, position, direction, animation, safeArea, textZone, fontScale, reduced }`,
+never read files, and never know about packages. Positioning respects the
+sidecar `safeArea` (hook band top ~14%, caption band bottom ~20%); when
+`director.json` provides text-safe zones those win — never cover a face.
 
-Dimensions, duration and fps are resolved from the source video via `@remotion/media-parser` — never hardcoded.
+## Motion registry (`src/motion/`)
 
-## Render modes
+Enter/exit presets as pure functions `(ctx: {frame, fps, window, direction?,
+reduced?}) => CSSProperties`: `riseMask`, `springPop`, `blurIn`, `slideEdge`,
+`fadeThrough`, `dipExit`. Shared timing rules: entries ≈12 frames @30 fps,
+**exits run at ~60% and always finish before the window closes**. Every
+overlay accepts `animation={{ enter: "riseMask", exit: "fadeThrough" }}`.
 
-One composition, two outputs. Caption timing, position and animation are identical in both — verified so the alpha overlay lines up perfectly when composited in DaVinci Resolve or Premiere.
+**Adding an animation** = one file in `src/motion/` exporting a
+`MotionPresetPair` + one line in the `motionPresets` map in
+`src/motion/index.ts` (mirrors the theme registry).
+
+**Adding an overlay** = one folder in `src/overlays/` (copy the structure of
+an existing one: `index.tsx` built on `OverlayRoot`, `animations.ts`,
+`README.md`, `fixture.json`, `demo.tsx`) + register the demo in `Root.tsx`
+under Components/ + export it from `src/overlays/index.ts`.
+
+Non-negotiables every overlay and preset obeys (see `src/design/tokens.ts`):
+the **word** is the smallest animatable unit (never split Arabic into
+characters); animate opacity + transform only, never opacity alone; shared
+`springs.enter`/`springs.exit`; staggers 2–4 frames; translations 20–40 px;
+scale from 0.94; motion-blur trail only during entry windows; all colours
+from `palette`, interpolated in OKLCH; no layout shift, ever.
+
+## Compositions
+
+- **`AuthoredReel`** (Studio: `Reels/<clip-id>`) — `OffthreadVideo` (premounted)
+  + bottom-caption scrim (burn only, animated with the caption) + Hook +
+  authored captions + Nameplate. Choreography: the hook owns frame 0; the
+  nameplate slides in exactly as the hook starts its exit and stays; captions
+  play their authored windows. A **promo** is the same composition with zero
+  captions. Props: `mode` (`burn`/`alpha`), `asrSubtitles` (small ASR
+  subtitles under the overlays, off by default), `fontScale`,
+  `hookAnimation`/`captionAnimation` overrides, `reduced`, `debug` (safe
+  areas + director zones + window timeline).
+- **`AsrCaptioned`** — the classic karaoke/wordPop treatment fed from a
+  package folder (sidecar `captions[]` or the package's `captions.json`).
+- **`Legacy/Captioned`** — the original standalone burner
+  (`public/video.mp4` + `public/captions.json`), unchanged, still driven by
+  `@remotion/media-parser`.
+
+Burn and alpha stay pixel-identical for overlay layers: in alpha mode the
+video layer and scrims are simply not rendered.
+
+## Batch rendering
 
 ```sh
-npm run render          # burn:  video + scrim + captions → out/final.mp4
-npm run render:alpha    # alpha: captions only, transparent ProRes 4444 → out/overlay.mov
-npm run render:webm     # alpha: VP8 with alpha channel → out/overlay.webm
-npm run preview         # quick check: frames 0–150 → out/preview.mp4
+npm run render:batch                          # everything → out/<clip-id>.mp4
+npm run render:batch -- --only reel-001,promo-001
+npm run render:batch -- --mode alpha          # transparent ProRes 4444 .mov
+npm run render:batch -- --frames=0-90         # smoke render
+npm run render:batch -- --force --out dist/ --concurrency 4
 ```
 
-In `alpha` mode the video layer and the scrim gradient are simply not rendered, and no element carries a background colour, so the output is genuinely transparent.
+The script bundles **once**, then runs `selectComposition` + `renderMedia`
+per reel through a concurrency pool (default `min(reels, cpus − 1)`; browser
+tabs are divided across the pool). Outputs whose mtime is newer than every
+file in their package are **skipped** unless `--force`. One failed reel never
+kills the batch: results land in `out/render-report.json` (per reel:
+duration, render time, output path, ok/skipped/failed) and the exit code.
 
-## Adding a theme
+Single-reel workflows still work: `npm run render`, `npm run render:alpha`,
+`npm run render:webm`, `npm run preview` (all against `Legacy/Captioned`),
+or `npx remotion render reel-001` for one package.
 
-1. Create one file in `src/themes/`, exporting a `Theme` (see `src/themes/index.ts` for the interface — `renderWord` receives word timing, activity flags and frame context, and returns CSS for that word).
-2. Register it with one line in the `themes` map in `src/themes/index.ts`.
-3. Add its key to the `theme` enum in `src/schema/props.ts` so it shows up in Studio.
+## Legacy `captions.json` + themes
 
-Rules every theme must respect (see `src/design/tokens.ts` for the numeric limits):
-
-- The **word** is the smallest animatable unit — never split Arabic into characters (it breaks cursive joining).
-- Animate `opacity` and `transform` only, and never opacity alone. All words stay in the DOM from the segment's first frame — no layout shift, ever.
-- Use the shared `springs.enter` / `springs.exit` configs — one easing family across the project.
-- Stagger 2–4 frames, translations 20–40 px, scale from 0.94, motion blur (via the theme's `trail` field) on any movement over ~25 px in 5 frames.
-- Colours come from `palette`, and colour interpolation goes through OKLCH (`src/design/colour.ts`), never RGB.
+The v1 milliseconds-based schema, the karaoke/wordPop themes and the rules
+for adding a theme are unchanged — see `src/schema/captions.ts` and
+`src/themes/index.ts`. Themes: one file in `src/themes/` + one registry line
++ the `theme` enum in `src/schema/props.ts`.
 
 ## Project layout
 
 ```
 src/
-  Root.tsx                  # <Composition> registration + calculateMetadata
-  CaptionedVideo.tsx        # top-level: video layer + scrim + caption layer
-  schema/captions.ts        # zod schema, validation, token/timing resolution
-  schema/props.ts           # composition props schema (Studio controls)
-  captions/useActiveSegment.ts  # frame → current segment + local progress
-  captions/CaptionPage.tsx  # renders one segment, delegates styling to theme
-  captions/Word.tsx         # single word primitive, theme-agnostic
-  themes/                   # theme registry + karaoke + wordPop
-  design/                   # tokens, font loading, OKLCH helpers
-public/
-  video.mp4                 # the source video
-  captions.json             # the captions
+  Root.tsx                 # registers Reels/ (from manifest), Components/, Legacy/
+  ingest/                  # THE typed gateway: zod schemas, ReelPackage resolver,
+                           #   browser loader hook, node fs loader, manifest types
+  generated/reels-manifest.json  # written by scripts/discover-reels.ts
+  motion/                  # animation registry: presets + timing + merge
+  overlays/                # folder-per-component: Hook, CaptionShort, CaptionLong,
+                           #   Nameplate, SafeArea (+ shared OverlayRoot, wordStagger)
+  compositions/            # AuthoredReel, AsrCaptioned (+ scrim, ASR subtitles)
+  CaptionedVideo.tsx       # legacy standalone burner
+  captions/ themes/ schema/ design/   # unchanged caption machinery + tokens
+scripts/
+  discover-reels.ts        # scan public/reels → manifest (seeds from fixtures/)
+  render-batch.ts          # bundle once, render everything in parallel
+fixtures/reels/            # committed sample batch (2 authored, 1 promo, 1 asr)
+tests/ingest.test.ts       # discriminator default, frame math, promo rules, reports
 ```
 
-Themes never read `captions.json` directly, and caption components never hardcode a colour or a duration.
+Constraints held throughout: TypeScript strict; zod-validate every external
+file; UTF-8/RTL correctness; no network at render time; deterministic output
+(same package → same MP4).

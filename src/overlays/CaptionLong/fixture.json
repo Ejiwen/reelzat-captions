@@ -1,0 +1,8 @@
+{
+  "data": {
+    "lines": ["سطر أول متوازن في المعنى", "وسطر ثانٍ يكمله ويوازنه"]
+  },
+  "window": { "startFrame": 15, "endFrame": 135 },
+  "position": "bottom",
+  "direction": "rtl"
+}
