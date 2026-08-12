@@ -2,7 +2,6 @@ import React from "react";
 import { AbsoluteFill, OffthreadVideo, Sequence, staticFile, useVideoConfig } from "remotion";
 import { useReelPackage } from "../ingest/useReelPackage";
 import type { ReelPackage, ResolvedAuthoredCaption } from "../ingest/resolve";
-import { exitStartFrame } from "../motion";
 import {
   CaptionLong,
   CaptionShort,
@@ -94,17 +93,13 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
     ),
   };
 
-  // The nameplate enters exactly when the hook starts its exit and stays to
-  // the end of the clip.
+  // The vertical identity rail is spatially separate from the hook/captions,
+  // so it can identify the reel from the opening frame through the outro.
   const nameplateWindow = {
-    startFrame: Math.max(0, exitStartFrame({ frame: 0, fps, window: hookWindow })),
+    startFrame: 0,
     endFrame: durationInFrames,
   };
-  // Captions sharing the nameplate's band dim it while they are on screen.
   const nameplatePosition: OverlayPosition = "top";
-  const nameplateDimWindows = captions
-    .filter((c) => c.position === nameplatePosition)
-    .map((c) => c.window);
 
   const bottomCaptionWindows = captions
     .filter((c) => c.position === "bottom")
@@ -164,7 +159,6 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         direction={pkg.direction}
         safeArea={pkg.safeArea}
         fontScale={fontScale}
-        dimWindows={nameplateDimWindows}
         reduced={reduced}
       />
       {debug ? (

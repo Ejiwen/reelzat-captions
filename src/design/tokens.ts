@@ -60,8 +60,8 @@ export const textShadow = "0 2px 12px rgba(0,0,0,0.45)";
 export const overlayType = {
   hookSizeFactor: 0.062, // the strongest element on screen
   captionSizeFactor: 0.052,
-  nameplateChannelSizeFactor: 0.026,
-  nameplateEpisodeSizeFactor: 0.02,
+  nameplateChannelSizeFactor: 0.032,
+  nameplateEpisodeSizeFactor: 0.025,
   // fitText may shrink the hook down to this fraction before wrapping.
   hookMinFitScale: 0.7,
 } as const;

@@ -1,19 +1,17 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig } from "remotion";
+import { useVideoConfig } from "remotion";
 import { fontFamily, reelTypography } from "../../design/fonts";
-import { overlaySurfaces, overlayType, palette, typeScale } from "../../design/tokens";
+import { overlaySurfaces, overlayType, palette } from "../../design/tokens";
 import { OverlayRoot } from "../OverlayRoot";
-import type { OverlayBaseProps, OverlayWindow } from "../types";
-import { dimFactor, nameplateDefaultAnimation } from "./animations";
+import { facebookSafeRegionTopPx } from "../ProgressBar/math";
+import type { OverlayBaseProps } from "../types";
+import { nameplateDefaultAnimation } from "./animations";
 
 export type NameplateProps = OverlayBaseProps & {
   data: {
     channel: string;
     episodeTitle?: string;
   };
-  // Windows of same-band captions — the nameplate yields fully (fades to 0)
-  // while any of them is on screen so it never competes or collides.
-  dimWindows?: OverlayWindow[];
 };
 
 // Channel identity chip: channel name + episode title in a quiet corner of
@@ -27,38 +25,63 @@ export const Nameplate: React.FC<NameplateProps> = ({
   safeArea,
   textZone,
   fontScale = 1,
-  dimWindows = [],
   reduced,
 }) => {
-  const frame = useCurrentFrame();
-  const { width } = useVideoConfig();
+  const { width, height } = useVideoConfig();
 
   const channelSize = width * overlayType.nameplateChannelSizeFactor * fontScale;
   const episodeSize = width * overlayType.nameplateEpisodeSizeFactor * fontScale;
+  const resolvedSidePct = safeArea?.sidePct ?? 7;
+  const safeTop = facebookSafeRegionTopPx(width, height, 4 / 5);
+  const safeRegionHeight = height - safeTop * 2;
+  // Physical left side avoids the TikTok/Reels action rail on the right.
+  // The anchor sits in the upper third of the shared centered 4:5 safe region.
+  const anchorX = width * (resolvedSidePct / 100);
+  const anchorY = safeTop + safeRegionHeight * 0.28;
 
   return (
     <OverlayRoot
       window={window}
       position={position}
-      direction={direction}
+      // The identity card has a fixed editorial home in the physical
+      // top-left corner. Its text remains RTL inside the card.
+      direction="ltr"
       animation={animation}
       safeArea={safeArea}
-      textZone={textZone}
+      textZone={null}
+      placementStyle={{
+        left: anchorX,
+        top: anchorY,
+        width: 0,
+        height: 0,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
       reduced={reduced}
       align="start"
     >
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
+          width: "max-content",
+          flexShrink: 0,
+          // With the -90deg rotation, RTL row order reads top-to-bottom as:
+          // channel, separator, episode title.
+          flexDirection: "row",
+          alignItems: "center",
+          gap: channelSize * 0.42,
           direction,
-          padding: `${channelSize * 0.35}px ${channelSize * 0.7}px`,
-          borderRadius: channelSize * 0.5,
+          textAlign: direction === "rtl" ? "right" : "left",
+          maxWidth: width * 0.72,
+          padding: `${channelSize * 0.22}px ${channelSize * 0.58}px`,
+          borderRadius: channelSize * 0.42,
           background: overlaySurfaces.chipBackground,
-          opacity: dimFactor(frame, dimWindows),
           fontFamily,
-          lineHeight: typeScale.lineHeight,
+          lineHeight: 1.35,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          transform: "rotate(-90deg)",
+          transformOrigin: "center",
         }}
       >
         <div
@@ -66,20 +89,36 @@ export const Nameplate: React.FC<NameplateProps> = ({
             fontSize: channelSize,
             fontWeight: reelTypography.nameplateChannel,
             color: palette.ink,
+            flexShrink: 0,
           }}
         >
           {data.channel}
         </div>
         {data.episodeTitle ? (
-          <div
-            style={{
-              fontSize: episodeSize,
-              fontWeight: reelTypography.nameplateEpisode,
-              color: palette.muted,
-            }}
-          >
-            {data.episodeTitle}
-          </div>
+          <>
+            <div
+              style={{
+                width: channelSize * 0.54,
+                height: channelSize * 0.54,
+                flexShrink: 0,
+                borderRadius: "50%",
+                background: palette.gold,
+                boxShadow: `0 0 ${channelSize * 0.2}px color-mix(in oklch, ${palette.gold} 55%, transparent)`,
+              }}
+            />
+            <div
+              style={{
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                fontSize: episodeSize,
+                fontWeight: reelTypography.nameplateEpisode,
+                color: `color-mix(in oklch, ${palette.ink} 88%, ${palette.muted})`,
+              }}
+            >
+              {data.episodeTitle}
+            </div>
+          </>
         ) : null}
       </div>
     </OverlayRoot>

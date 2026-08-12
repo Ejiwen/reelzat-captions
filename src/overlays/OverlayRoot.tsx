@@ -29,6 +29,8 @@ type OverlayRootProps = {
   // Optional exact bottom anchor for overlays that must clear another
   // screen element (for example CaptionLong above ProgressBar).
   bottomOffsetPx?: number;
+  // Optional physical placement override for overlays with a bespoke layout.
+  placementStyle?: React.CSSProperties;
   children: React.ReactNode;
 };
 
@@ -72,6 +74,7 @@ export const OverlayRoot: React.FC<OverlayRootProps> = ({
   trailOnEntry = false,
   align = "center",
   bottomOffsetPx,
+  placementStyle,
   children,
 }) => {
   const frame = useCurrentFrame();
@@ -92,14 +95,15 @@ export const OverlayRoot: React.FC<OverlayRootProps> = ({
         alignItems: align === "start" ? "flex-start" : "center",
         direction,
         pointerEvents: "none",
-        ...(bottomOffsetPx !== undefined
+        ...(placementStyle ??
+        (bottomOffsetPx !== undefined
           ? {
               insetInline: `${safeArea.sidePct}%`,
               bottom: bottomOffsetPx,
             }
           : textZone
             ? zoneStyle(textZone)
-            : bandStyle(position, safeArea)),
+            : bandStyle(position, safeArea))),
         ...(animation ? overlayMotionStyle(animation, ctx) : {}),
       }}
     >

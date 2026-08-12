@@ -1,11 +1,12 @@
 # Nameplate
 
-Channel identity chip — channel name plus (optionally) the episode title —
-sitting in the inline-start corner of the safe area. Persistent but quiet: it
-enters on `slideEdge` after the hook exits and then just stays. While any
-window in `dimWindows` is active (captions sharing its band) it yields fully
-— fading to 0 with an 8-frame ramp — so it never competes with, or collides
-with, a caption.
+Compact identity chip — channel name plus (optionally) the episode title on
+one line at phone-readable type sizes, separated by a gold dot — rotated 90°
+on the left Y axis with the channel first and episode second, inside the
+shared Facebook/TikTok safe region and away from the right-side action rail.
+Persistent but quiet: it enters from the safe left edge on `slideEdge`, stays
+fully visible and stable throughout the reel, then leaves with a restrained
+`fadeThrough` during the final frames.
 
 Pure props-in, pixels-out: no file access, no package knowledge.
 
@@ -14,11 +15,10 @@ Pure props-in, pixels-out: no file access, no package knowledge.
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `data` | `{ channel: string; episodeTitle?: string }` | — | identity |
-| `window` | `{ startFrame, endFrame }` | — | usually hook-end → clip-end |
+| `window` | `{ startFrame, endFrame }` | — | normally frame 0 → clip end |
 | `position` | `"top" \| "bottom"` | `"top"` | band anchor |
-| `direction` | `"rtl" \| "ltr"` | — | corner = inline-start (right for RTL) |
+| `direction` | `"rtl" \| "ltr"` | — | controls text direction; placement remains top-left |
 | `animation` | `{ enter, exit }` | `{ enter: "slideEdge", exit: "fadeThrough" }` | |
-| `dimWindows` | `OverlayWindow[]` | `[]` | fade out fully while any is active |
 | `safeArea` / `textZone` / `fontScale` / `reduced` | | | see `src/overlays/types.ts` |
 
 ## Usage
@@ -26,9 +26,8 @@ Pure props-in, pixels-out: no file access, no package knowledge.
 ```tsx
 <Nameplate
   data={{ channel: "أسمار وأفكار", episodeTitle: "مأساة حاضرة دارفور" }}
-  window={{ startFrame: 92, endFrame: 801 }}
+  window={{ startFrame: 0, endFrame: 801 }}
   position="top"
   direction="rtl"
-  dimWindows={[{ startFrame: 360, endFrame: 450 }]}
 />
 ```
