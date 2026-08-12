@@ -14,6 +14,7 @@ import {
   type OverlayTextZone,
   type TimelineItem,
 } from "../overlays";
+import { hookConfig } from "../overlays/Hook/config";
 import type { AuthoredReelProps } from "../schema/reelProps";
 import { AsrSubtitles } from "./AsrSubtitles";
 import { CaptionScrim } from "./CaptionScrim";
@@ -73,10 +74,29 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
 
   const { hook, captions } = authored;
 
+  // Keep the entrance and exit timings untouched; extend only the steady
+  // hold between them. Stop before the next authored caption so overlays do
+  // not compete for reading attention, and never exceed the clip duration.
+  const nextCaptionStart = captions.reduce(
+    (earliest, caption) => Math.min(earliest, caption.window.startFrame),
+    durationInFrames,
+  );
+  const hookWindow = {
+    ...hook.window,
+    endFrame: Math.max(
+      hook.window.endFrame,
+      Math.min(
+        durationInFrames,
+        nextCaptionStart,
+        hook.window.endFrame + Math.round(hookConfig.extraHoldSeconds * fps),
+      ),
+    ),
+  };
+
   // The nameplate enters exactly when the hook starts its exit and stays to
   // the end of the clip.
   const nameplateWindow = {
-    startFrame: Math.max(0, exitStartFrame({ frame: 0, fps, window: hook.window })),
+    startFrame: Math.max(0, exitStartFrame({ frame: 0, fps, window: hookWindow })),
     endFrame: durationInFrames,
   };
   // Captions sharing the nameplate's band dim it while they are on screen.
@@ -90,7 +110,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
     .map((c) => c.window);
 
   const timeline: TimelineItem[] = [
-    { label: "hook", window: hook.window, position: hook.position },
+    { label: "hook", window: hookWindow, position: hook.position },
     ...captions.map((c, i) => ({
       label: `caption ${i + 1} (${c.type})`,
       window: c.window,
@@ -129,7 +149,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
 
       <Hook
         data={{ text: hook.text }}
-        window={hook.window}
+        window={hookWindow}
         position={hook.position}
         direction={pkg.direction}
         animation={hookAnimation ?? undefined}

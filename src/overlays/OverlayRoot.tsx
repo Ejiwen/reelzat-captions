@@ -15,7 +15,7 @@ type OverlayRootProps = {
   window: OverlayBaseProps["window"];
   position: OverlayPosition;
   direction: OverlayBaseProps["direction"];
-  animation: MotionSpec;
+  animation?: MotionSpec;
   safeArea?: OverlaySafeArea;
   textZone?: OverlayTextZone | null;
   reduced?: boolean;
@@ -89,7 +89,7 @@ export const OverlayRoot: React.FC<OverlayRootProps> = ({
         direction,
         pointerEvents: "none",
         ...(textZone ? zoneStyle(textZone) : bandStyle(position, safeArea)),
-        ...overlayMotionStyle(animation, ctx),
+        ...(animation ? overlayMotionStyle(animation, ctx) : {}),
       }}
     >
       {children}

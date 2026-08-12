@@ -5,6 +5,7 @@ export const palette = {
   navy: "#0B1F3A",
   sky: "#38BDF8",
   cyan: "#22D3EE",
+  gold: "#F2C94C",
   ink: "#F8FAFC",
   muted: "#94A3B8",
 } as const;
