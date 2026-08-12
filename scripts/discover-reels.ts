@@ -15,6 +15,7 @@ const projectRoot = resolve(__dirname, "..");
 const reelsDir = join(projectRoot, "public", "reels");
 const fixturesDir = join(projectRoot, "fixtures", "reels");
 const manifestPath = join(projectRoot, "src", "generated", "reels-manifest.json");
+const skipFixtureSeedPath = join(reelsDir, ".skip-fixture-seed");
 
 const hasPackages = (dir: string): boolean =>
   existsSync(dir) &&
@@ -22,7 +23,7 @@ const hasPackages = (dir: string): boolean =>
     (e) => e.isDirectory() && existsSync(join(dir, e.name, "remotion.json")),
   );
 
-if (!hasPackages(reelsDir) && hasPackages(fixturesDir)) {
+if (!hasPackages(reelsDir) && !existsSync(skipFixtureSeedPath) && hasPackages(fixturesDir)) {
   console.log(`[discover-reels] public/reels is empty — seeding from fixtures/reels`);
   mkdirSync(reelsDir, { recursive: true });
   cpSync(fixturesDir, reelsDir, { recursive: true });

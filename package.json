@@ -5,6 +5,7 @@
   "description": "Burns broadcast-quality Arabic captions over a video file, driven by a local captions.json",
   "scripts": {
     "discover": "tsx scripts/discover-reels.ts",
+    "clean:batch": "tsx scripts/clean-batch.ts",
     "prestudio": "npm run discover",
     "studio": "remotion studio",
     "render": "remotion render Captioned out/final.mp4 --props='{\"mode\":\"burn\"}'",

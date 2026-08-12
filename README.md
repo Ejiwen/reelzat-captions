@@ -21,6 +21,7 @@ publish-ready MP4.
 npm i
 npm run studio          # discovery runs first; Reels/, Components/, Legacy/ folders
 npm run render:batch    # render every package in public/reels → out/
+npm run clean:batch     # clear the current batch/output and prepare for a new show
 npm test                # ingest unit tests
 ```
 
@@ -186,6 +187,7 @@ src/
   CaptionedVideo.tsx       # legacy standalone burner
   captions/ themes/ schema/ design/   # unchanged caption machinery + tokens
 scripts/
+  clean-batch.ts         # clear public/reels + out; suppress fixture re-seeding
   discover-reels.ts        # scan public/reels → manifest (seeds from fixtures/)
   render-batch.ts          # bundle once, render everything in parallel
 fixtures/reels/            # committed sample batch (2 authored, 1 promo, 1 asr)
