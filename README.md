@@ -92,6 +92,7 @@ under **Components/** in Studio so it can be previewed and tuned in isolation.
 | `CaptionShort/` | One big authored line, auto-fit, never wrapped. Word-stagger entrance. |
 | `CaptionLong/` | Exactly two balanced lines, one font size for both, flat word-stagger across the break. |
 | `Nameplate/` | Channel + episode title chip in the safe-area corner. Enters as the hook exits; yields (fades out) while a caption shares its band. |
+| `ProgressBar/` | Centered circular RTL/LTR progress ring with the Wazin logo, aligned to the bottom Facebook 4:5 safe-region boundary. |
 | `SafeArea/` | Debug guides: safe-area bands, director text/face zones, per-overlay window timeline. |
 
 Overlays are **pure props-in, pixels-out** — they take

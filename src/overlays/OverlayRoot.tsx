@@ -26,6 +26,9 @@ type OverlayRootProps = {
   // Cross-axis alignment inside the band: captions centre, the nameplate
   // hugs the inline-start corner.
   align?: "center" | "start";
+  // Optional exact bottom anchor for overlays that must clear another
+  // screen element (for example CaptionLong above ProgressBar).
+  bottomOffsetPx?: number;
   children: React.ReactNode;
 };
 
@@ -68,6 +71,7 @@ export const OverlayRoot: React.FC<OverlayRootProps> = ({
   reduced,
   trailOnEntry = false,
   align = "center",
+  bottomOffsetPx,
   children,
 }) => {
   const frame = useCurrentFrame();
@@ -88,7 +92,14 @@ export const OverlayRoot: React.FC<OverlayRootProps> = ({
         alignItems: align === "start" ? "flex-start" : "center",
         direction,
         pointerEvents: "none",
-        ...(textZone ? zoneStyle(textZone) : bandStyle(position, safeArea)),
+        ...(bottomOffsetPx !== undefined
+          ? {
+              insetInline: `${safeArea.sidePct}%`,
+              bottom: bottomOffsetPx,
+            }
+          : textZone
+            ? zoneStyle(textZone)
+            : bandStyle(position, safeArea)),
         ...(animation ? overlayMotionStyle(animation, ctx) : {}),
       }}
     >

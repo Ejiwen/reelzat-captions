@@ -3,8 +3,47 @@ import { test } from "node:test";
 import { join } from "node:path";
 import { discoverReels, loadReelPackageFromDisk } from "../src/ingest/node";
 import { resolveReelPackage, secondsToFrames } from "../src/ingest/resolve";
+import {
+  captionBottomOffsetAboveProgressPx,
+  facebookSafeRegionBottomPct,
+  facebookSafeRegionBottomPx,
+  facebookSafeRegionTopPct,
+  facebookSafeRegionTopPx,
+  normalizedReelProgress,
+} from "../src/overlays/ProgressBar/math";
 
 const fixturesDir = join(__dirname, "..", "fixtures", "reels");
+
+// ---------------------------------------------------------------------------
+// Progress bar geometry
+
+test("progress is exact at the first, middle, and final renderable frames", () => {
+  assert.equal(normalizedReelProgress(0, 101), 0);
+  assert.equal(normalizedReelProgress(50, 101), 0.5);
+  assert.equal(normalizedReelProgress(100, 101), 1);
+  assert.equal(normalizedReelProgress(-5, 101), 0);
+  assert.equal(normalizedReelProgress(105, 101), 1);
+  assert.equal(normalizedReelProgress(0, 1), 1);
+});
+
+test("Facebook 4:5 safe-region boundaries scale with the composition", () => {
+  assert.equal(facebookSafeRegionTopPx(1080, 1920, 4 / 5), 285);
+  assert.equal(facebookSafeRegionTopPct(1080, 1920, 4 / 5), 14.84375);
+  assert.equal(facebookSafeRegionTopPx(540, 960, 4 / 5), 142.5);
+  assert.equal(facebookSafeRegionBottomPx(1080, 1920, 4 / 5), 1635);
+  assert.equal(facebookSafeRegionBottomPct(1080, 1920, 4 / 5), 85.15625);
+  assert.equal(
+    captionBottomOffsetAboveProgressPx({
+      width: 1080,
+      height: 1920,
+      safeAspectRatio: 4 / 5,
+      safeAreaInsetPx: 12,
+      ringSizePx: 152,
+      clearancePx: 52,
+    }),
+    425,
+  );
+});
 
 // ---------------------------------------------------------------------------
 // Building blocks

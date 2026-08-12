@@ -7,5 +7,10 @@ export { HookBg, type HookBgProps, type HookBgSettings } from "./HookBg";
 export { CaptionShort, type CaptionShortProps } from "./CaptionShort";
 export { CaptionLong, type CaptionLongProps } from "./CaptionLong";
 export { Nameplate, type NameplateProps } from "./Nameplate";
+export {
+  ProgressBar,
+  type ProgressBarProps,
+  type ProgressBarConfig,
+} from "./ProgressBar";
 export { SafeAreaGuides, WindowTimeline, type TimelineItem } from "./SafeArea";
 export { staggeredWordStyle, staggerSettleFrames } from "./wordStagger";

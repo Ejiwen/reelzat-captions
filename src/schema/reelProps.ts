@@ -39,6 +39,7 @@ export const asrCaptionedProps = z.object({
   fontScale: z.number().min(0.7).max(1.4),
   // null → use the package's own safeArea.bottomPct.
   safeAreaBottomPct: z.number().min(5).max(40).nullable(),
+  reduced: z.boolean(),
   debug: z.boolean(),
 });
 export type AsrCaptionedProps = z.infer<typeof asrCaptionedProps>;
@@ -49,5 +50,6 @@ export const defaultAsrCaptionedProps: Omit<AsrCaptionedProps, "packageDir" | "c
   offsetMs: 0,
   fontScale: 1,
   safeAreaBottomPct: null,
+  reduced: false,
   debug: false,
 };

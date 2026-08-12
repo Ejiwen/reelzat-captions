@@ -5,7 +5,7 @@ import { useActiveSegment } from "../captions/useActiveSegment";
 import { palette, scrim } from "../design/tokens";
 import { useReelPackage } from "../ingest/useReelPackage";
 import type { ReelPackage } from "../ingest/resolve";
-import { SafeAreaGuides } from "../overlays";
+import { ProgressBar, SafeAreaGuides } from "../overlays";
 import type { AsrCaptionedProps } from "../schema/reelProps";
 import type { ResolvedCaptions } from "../schema/captions";
 import { themes } from "../themes";
@@ -23,6 +23,9 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
         <Sequence premountFor={60}>
           <OffthreadVideo src={staticFile(pkg.media.videoSrc)} pauseWhenBuffering />
         </Sequence>
+      ) : null}
+      {pkg ? (
+        <ProgressBar direction={pkg.direction} reduced={props.reduced} />
       ) : null}
       {pkg && props.mode === "burn" ? (
         <BottomScrim bottomPct={props.safeAreaBottomPct ?? pkg.safeArea.bottomPct} />

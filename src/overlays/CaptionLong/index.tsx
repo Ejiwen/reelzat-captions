@@ -7,6 +7,8 @@ import { tokenizeLine } from "../../schema/captions";
 import { CaptionLines } from "../CaptionLines";
 import { OverlayRoot } from "../OverlayRoot";
 import type { OverlayBaseProps } from "../types";
+import { progressBarConfig } from "../ProgressBar/config";
+import { captionBottomOffsetAboveProgressPx } from "../ProgressBar/math";
 import { captionLongDefaultAnimation } from "./animations";
 
 export type CaptionLongProps = OverlayBaseProps & {
@@ -32,7 +34,7 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
   stagger = true,
   reduced,
 }) => {
-  const { width } = useVideoConfig();
+  const { width, height } = useVideoConfig();
 
   const baseSize = width * overlayType.captionSizeFactor * fontScale;
   const maxLineWidth = width * spacing.maxLineWidthFraction;
@@ -55,6 +57,17 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
   }, [data.lines, baseSize, maxLineWidth]);
 
   const lines = useMemo(() => data.lines.map(tokenizeLine), [data.lines]);
+  const bottomOffsetPx =
+    position === "bottom"
+      ? captionBottomOffsetAboveProgressPx({
+          width,
+          height,
+          safeAspectRatio: progressBarConfig.facebookSafeAspectRatio,
+          safeAreaInsetPx: progressBarConfig.safeAreaInsetPx,
+          ringSizePx: progressBarConfig.ringSizePx,
+          clearancePx: progressBarConfig.captionClearancePx,
+        })
+      : undefined;
 
   return (
     <OverlayRoot
@@ -64,6 +77,7 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
       animation={animation}
       safeArea={safeArea}
       textZone={textZone}
+      bottomOffsetPx={bottomOffsetPx}
       reduced={reduced}
       trailOnEntry={stagger}
     >

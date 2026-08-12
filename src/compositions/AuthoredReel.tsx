@@ -8,6 +8,7 @@ import {
   CaptionShort,
   Hook,
   Nameplate,
+  ProgressBar,
   SafeAreaGuides,
   WindowTimeline,
   type OverlayPosition,
@@ -36,9 +37,9 @@ export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
       {pkg && props.mode === "burn" ? (
         // premountFor keeps the video mounted-and-buffered ahead of time so
         // batch renders never stall waiting for the first frames.
-        <Sequence premountFor={60}>
+        (<Sequence premountFor={60}>
           <OffthreadVideo src={staticFile(pkg.media.videoSrc)} pauseWhenBuffering />
-        </Sequence>
+        </Sequence>)
       ) : null}
       {pkg ? <OverlayStack pkg={pkg} {...props} /> : null}
     </AbsoluteFill>
@@ -121,21 +122,20 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
 
   return (
     <AbsoluteFill>
+      <ProgressBar direction={pkg.direction} reduced={reduced} />
       {mode === "burn" ? (
         <CaptionScrim windows={bottomCaptionWindows} bottomPct={pkg.safeArea.bottomPct} />
       ) : null}
-
       {asrSubtitles && pkg.asr.words.length > 0 ? (
         // Just ABOVE the caption strip, so it never collides with authored
         // captions living inside it.
-        <AsrSubtitles
+        (<AsrSubtitles
           words={pkg.asr.words}
           direction={pkg.direction}
           bottomPct={pkg.safeArea.bottomPct + 2}
           fontScale={fontScale}
-        />
+        />)
       ) : null}
-
       {captions.map((caption, i) => (
         <AuthoredCaption
           key={i}
@@ -146,7 +146,6 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
           reduced={reduced}
         />
       ))}
-
       <Hook
         data={{ text: hook.text }}
         window={hookWindow}
@@ -158,7 +157,6 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         fontScale={fontScale}
         reduced={reduced}
       />
-
       <Nameplate
         data={{ channel: authored.channel, episodeTitle: authored.episodeTitle }}
         window={nameplateWindow}
@@ -169,7 +167,6 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         dimWindows={nameplateDimWindows}
         reduced={reduced}
       />
-
       {debug ? (
         <>
           <SafeAreaGuides

@@ -10,6 +10,7 @@ import { CaptionShortDemo } from "./overlays/CaptionShort/demo";
 import { HookDemo } from "./overlays/Hook/demo";
 import { HookBgDemo } from "./overlays/HookBg/demo";
 import { NameplateDemo } from "./overlays/Nameplate/demo";
+import { ProgressBarDemo } from "./overlays/ProgressBar/demo";
 import { SafeAreaDemo } from "./overlays/SafeArea/demo";
 import {
   asrCaptionedProps,
@@ -95,6 +96,7 @@ export const RemotionRoot: React.FC = () => {
         <Composition id="CaptionShort-Demo" component={CaptionShortDemo} {...DEMO} />
         <Composition id="CaptionLong-Demo" component={CaptionLongDemo} {...DEMO} />
         <Composition id="Nameplate-Demo" component={NameplateDemo} {...DEMO} />
+        <Composition id="ProgressBar-Demo" component={ProgressBarDemo} {...DEMO} />
         <Composition id="SafeArea-Demo" component={SafeAreaDemo} {...DEMO} />
       </Folder>
 
