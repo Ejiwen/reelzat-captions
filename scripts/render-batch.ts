@@ -146,7 +146,10 @@ type ReportEntry = {
 const main = async () => {
   const cli = parseCli(process.argv.slice(2));
 
-  const { packages, failures } = discoverReels(reelsDir);
+  const { packages, failures, indexError } = discoverReels(reelsDir);
+  if (indexError) {
+    console.warn(`[render-batch] batch index invalid (ignored): ${indexError}`);
+  }
   for (const failure of failures) {
     console.error(`\n[render-batch] INVALID PACKAGE ${failure.clipId}:\n${failure.error}\n`);
   }

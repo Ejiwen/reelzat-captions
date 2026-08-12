@@ -31,9 +31,12 @@ if (!hasPackages(reelsDir) && hasPackages(fixturesDir)) {
 const manifest: ReelsManifest = { schemaVersion: 1, sourceDir: "public/reels", reels: [] };
 
 if (hasPackages(reelsDir)) {
-  const { packages, failures } = discoverReels(reelsDir);
+  const { packages, failures, indexError } = discoverReels(reelsDir);
   manifest.reels = packages.map(toManifestEntry);
 
+  if (indexError) {
+    console.warn(`[discover-reels] batch index invalid (ignored): ${indexError}`);
+  }
   for (const failure of failures) {
     console.error(`\n[discover-reels] SKIPPING ${failure.clipId}:\n${failure.error}\n`);
   }

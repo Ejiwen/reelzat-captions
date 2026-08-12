@@ -54,6 +54,9 @@ export const toManifestEntry = (pkg: ReelPackage): ReelManifestEntry => ({
 
 export type DiscoveredReels = {
   index: BatchIndex | null;
+  // A malformed batch index is a warning, never a batch failure — the folder
+  // scan is the source of truth for what renders.
+  indexError: string | null;
   packages: ReelPackage[];
   // Package folders whose validation failed, with the full error report.
   failures: { clipId: string; error: string }[];
@@ -67,18 +70,16 @@ export const discoverReels = (reelsDir: string): DiscoveredReels => {
   const failures: { clipId: string; error: string }[] = [];
 
   let index: BatchIndex | null = null;
+  let indexError: string | null = null;
   const rawIndex = readJsonIfExists(join(reelsDir, "remotion.json"));
   if (rawIndex !== undefined) {
     const parsed = batchIndexSchema.safeParse(rawIndex);
     if (parsed.success) {
       index = parsed.data;
     } else {
-      failures.push({
-        clipId: "(batch index)",
-        error: parsed.error.issues
-          .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-          .join("; "),
-      });
+      indexError = parsed.error.issues
+        .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+        .join("; ");
     }
   }
 
@@ -101,5 +102,5 @@ export const discoverReels = (reelsDir: string): DiscoveredReels => {
     }
   }
 
-  return { index, packages, failures };
+  return { index, indexError, packages, failures };
 };

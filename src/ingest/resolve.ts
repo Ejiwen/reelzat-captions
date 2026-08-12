@@ -8,6 +8,9 @@ import {
   authoringSchema,
   defaultSafeArea,
   directorSchema,
+  facesFromSegments,
+  normalizeAsrCue,
+  normalizeDirector,
   normalizeSidecar,
   sidecarSchema,
   wordsFileSchema,
@@ -252,14 +255,22 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
     }
   }
 
-  // ASR cues: sidecar captions[] win, captions.json (legacy v1) is the
-  // fallback. Resolution reuses the legacy validator so display tokens and
-  // timing behave identically to the standalone Captioned path.
+  // ASR cues: sidecar captions[] win, captions.json is the fallback — either
+  // the legacy v1 file shape or the reelzy bare array of seconds cues.
+  // Resolution reuses the legacy validator so display tokens and timing
+  // behave identically to the standalone Captioned path.
   let asrCaptions: ResolvedCaptions | null = null;
+  const fallbackCues = Array.isArray(input.asrCaptions)
+    ? {
+        version: 1,
+        language: sidecar.language,
+        segments: input.asrCaptions.map(normalizeAsrCue),
+      }
+    : input.asrCaptions;
   const asrRaw =
     sidecar.captions.length > 0
       ? { version: 1, language: sidecar.language, segments: sidecar.captions }
-      : input.asrCaptions;
+      : fallbackCues;
   if (asrRaw !== undefined && asrRaw !== null) {
     try {
       asrCaptions = validateCaptions(asrRaw);
@@ -278,11 +289,22 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
 
   let director: Director | null = null;
   if (input.director !== undefined) {
-    const parsed = directorSchema.safeParse(input.director);
+    const parsed = directorSchema.safeParse(normalizeDirector(input.director));
     if (parsed.success) {
       director = parsed.data;
     } else {
       zodProblems("director.json", parsed.error, problems);
+    }
+  }
+  // The reelzy emitter carries face boxes inside the sidecar's framing
+  // segments rather than director.json — fold them in so the debug guides
+  // and never-cover-a-face rules see them either way.
+  const segmentFaces = facesFromSegments(sidecar.segments);
+  if (segmentFaces.length > 0) {
+    if (director === null) {
+      director = { faces: segmentFaces, textSafeZones: [], cuts: [] };
+    } else if (director.faces.length === 0) {
+      director = { ...director, faces: segmentFaces };
     }
   }
 

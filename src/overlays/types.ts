@@ -13,8 +13,9 @@ export type OverlayPosition = "top" | "bottom";
 
 export type TextDirection = "rtl" | "ltr";
 
-// Percent margins of the frame that overlays must respect.
-// topPct ≈ 14 → the hook band; bottomPct ≈ 20 → the caption band.
+// The strips the director reserved for text, as percent of frame height:
+// the hook band is the TOP topPct% (≈14), the caption band the BOTTOM
+// bottomPct% (≈20). Everything between belongs to the video content.
 export type OverlaySafeArea = {
   topPct: number;
   bottomPct: number;

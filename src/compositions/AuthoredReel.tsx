@@ -106,10 +106,12 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
       ) : null}
 
       {asrSubtitles && pkg.asr.words.length > 0 ? (
+        // Just ABOVE the caption strip, so it never collides with authored
+        // captions living inside it.
         <AsrSubtitles
           words={pkg.asr.words}
           direction={pkg.direction}
-          bottomPct={Math.max(4, pkg.safeArea.bottomPct - 12)}
+          bottomPct={pkg.safeArea.bottomPct + 2}
           fontScale={fontScale}
         />
       ) : null}

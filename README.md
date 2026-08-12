@@ -51,6 +51,16 @@ public/reels/
 - **`captionSource` is the branch key**: `"authored"` renders through
   `AuthoredReel`, `"asr"` through `AsrCaptioned`. A missing `captionSource`
   (v1 packages) is treated as `"asr"`.
+- **Two sidecar dialects are accepted** and folded into one canonical shape
+  by `normalizeSidecar()` before validation:
+  - canonical v2: `clipId`, `durationInSeconds`, ms-based `words[]`/
+    `captions[]`, percent `safeArea {topPct, bottomPct, sidePct}`;
+  - the reelzy emitter's v1: `id`, `duration`, seconds-float words/cues
+    (`{text, start, end}` — converted to ms once, at ingest), fraction
+    `safeArea {hookTopPct: 0.14, captionBottomPct: 0.2}`, face boxes inside
+    framing `segments[]` (centre-anchored fractions), and a bare-array
+    `captions.json`. `director.json`'s face `boxNorm` rects (top-left
+    fractions) are normalised too; unknown emitter fields are ignored.
 - Authored display windows are **clip-relative seconds** (floats). They are
   converted to frames in exactly one place: `src/ingest/resolve.ts`
   (`secondsToFrames`, `Math.floor` — 26.72 s @ 30 fps → 801 frames).

@@ -219,6 +219,95 @@ test("structurally broken sidecar reports zod issues with file + path", () => {
 });
 
 // ---------------------------------------------------------------------------
+// The reelzy emitter dialect (sidecar schemaVersion 1: id/duration, seconds
+// floats, fraction safeArea, faces inside framing segments)
+
+test("real reelzy v1 sidecar normalises into the canonical package", () => {
+  const pkg = resolveReelPackage({
+    clipId: "reel-001",
+    packageDir: "reels/reel-001",
+    sidecar: {
+      schemaVersion: 1,
+      id: "reel-001",
+      video: "reel-9x16.mp4",
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      duration: 26.47,
+      aspect: "9:16",
+      language: "ar",
+      direction: "rtl",
+      title: "عنوان",
+      safeArea: { captionBottomPct: 0.2, hookTopPct: 0.14 },
+      words: [{ text: "ذيك", start: 0.0, end: 0.44, srcStart: 1017.13, probability: 0.613 }],
+      captions: [
+        {
+          start: 0.0,
+          end: 1.22,
+          text: "ذيك غروف",
+          words: [
+            { text: "ذيك", start: 0.0, end: 0.44 },
+            { text: "غروف", start: 0.44, end: 1.22 },
+          ],
+        },
+      ],
+      segments: [
+        {
+          t0: 0.0,
+          t1: 26.47,
+          mode: "single_close",
+          faces: [{ x: 0.5, y: 0.24, w: 0.55, h: 0.5 }],
+        },
+      ],
+      cuts: [],
+      authoring: validAuthoring({
+        clipId: "reel-001",
+        hook: { text: "خطاف", position: "top", display: { start: 0, end: 3 } },
+        captions: [],
+      }),
+      captionSource: "authored",
+      audio: "reel-9x16.m4a",
+    },
+  });
+
+  assert.equal(pkg.media.durationInFrames, 794); // 26.47 s @ 30 fps
+  assert.equal(pkg.media.audioSrc, "reels/reel-001/reel-9x16.m4a");
+  assert.deepEqual(pkg.safeArea, { topPct: 14, bottomPct: 20, sidePct: 7 });
+  // Seconds → ms, once, at ingest.
+  assert.deepEqual(pkg.asr.words, [{ text: "ذيك", startMs: 0, endMs: 440 }]);
+  const cue = pkg.asr.captions?.segments[0];
+  assert.equal(cue?.id, "cue-001");
+  assert.equal(cue?.startMs, 0);
+  assert.equal(cue?.endMs, 1220);
+  // Centre-anchored face fractions → top-left percent rects.
+  assert.deepEqual(pkg.director?.faces, [{ xPct: 22.5, yPct: 0, wPct: 55, hPct: 50 }]);
+});
+
+test("bare-array captions.json (reelzy seconds cues) is accepted", () => {
+  const sidecar = validSidecar({ captionSource: undefined, authoring: undefined });
+  delete (sidecar as Record<string, unknown>)["captionSource"];
+  delete (sidecar as Record<string, unknown>)["authoring"];
+  const pkg = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar,
+    asrCaptions: [
+      {
+        start: 1.5,
+        end: 2.5,
+        text: "كلمة أولى",
+        words: [
+          { text: "كلمة", start: 1.5, end: 2.0 },
+          { text: "أولى", start: 2.0, end: 2.5 },
+        ],
+      },
+    ],
+  });
+  assert.equal(pkg.asr.captions?.segments[0]?.id, "cue-001");
+  assert.equal(pkg.asr.captions?.segments[0]?.startMs, 1500);
+});
+
+// ---------------------------------------------------------------------------
 // Fixtures on disk (the committed batch)
 
 test("all four fixture packages load from disk", () => {
