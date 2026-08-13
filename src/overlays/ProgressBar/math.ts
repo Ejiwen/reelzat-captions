@@ -66,3 +66,51 @@ export const captionBottomOffsetAboveProgressPx = ({
   const ringTop = ringCenterY - (ringSizePx * scale) / 2;
   return height - ringTop + clearancePx * scale;
 };
+
+// ---------------------------------------------------------------------------
+// Shared geometry. The exact circle placement/size used by the ProgressBar
+// render — exported so other overlays (HookEnergyBridge) can originate their
+// motion from the true visual centre of the Wazin circle. If the ring's size
+// or placement changes, everything anchored to it moves automatically.
+
+import type { ProgressBarConfig } from "./config";
+
+export type ProgressBarGeometry = {
+  // Exact visual centre of the ring/logo disc, in composition px.
+  centerX: number;
+  centerY: number;
+  // Radius of the progress ring's stroke centreline.
+  ringRadius: number;
+  logoRadius: number;
+  // Scaled outer bounding box of the ring svg.
+  ringSizePx: number;
+  // width / 1080 — all pixel-authored values scale with this.
+  scale: number;
+};
+
+export const getProgressBarGeometry = ({
+  width,
+  height,
+  config,
+}: {
+  width: number;
+  height: number;
+  config: ProgressBarConfig;
+}): ProgressBarGeometry => {
+  const scale = width / 1080;
+  const size = config.ringSizePx * scale;
+  const trackWidth = config.trackHeightPx * scale;
+  const indicatorSize = config.indicatorSizePx * scale;
+  const borderWidth = config.indicatorBorderWidthPx * scale;
+  const outerClearance = Math.max(trackWidth, indicatorSize + borderWidth * 2);
+  return {
+    centerX: width / 2,
+    centerY:
+      facebookSafeRegionBottomPx(width, height, config.facebookSafeAspectRatio) -
+      config.safeAreaInsetPx * scale,
+    ringRadius: (size - outerClearance) / 2,
+    logoRadius: (config.logoDiscSizePx * scale) / 2,
+    ringSizePx: size,
+    scale,
+  };
+};

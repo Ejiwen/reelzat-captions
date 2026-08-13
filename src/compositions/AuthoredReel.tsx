@@ -15,6 +15,8 @@ import {
   type TimelineItem,
 } from "../overlays";
 import { hookConfig } from "../overlays/Hook/config";
+import { resolveHookBgTheme } from "../overlays/HookBg/themes";
+import { HookEnergyBridge } from "../overlays/HookEnergyBridge";
 import type { AuthoredReelProps } from "../schema/reelProps";
 import { AsrSubtitles } from "./AsrSubtitles";
 import { CaptionScrim } from "./CaptionScrim";
@@ -102,6 +104,17 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   };
   const nameplatePosition: OverlayPosition = "top";
 
+  // Resolve the HookBg theme ONCE — the energy bridge and the Hook (which
+  // renders HookBg) must always agree. Priority: Studio prop → project-wide
+  // hookConfig.background.themeOverride → the package's hook.backgroundTheme
+  // → keyword fallback on the hook text → configured default.
+  const resolvedHookBgTheme = resolveHookBgTheme({
+    explicit:
+      hookBgTheme ?? hookConfig.background.themeOverride ?? hook.backgroundTheme ?? undefined,
+    text: hook.text,
+    fallback: hookConfig.background.defaultTheme,
+  });
+
   const bottomCaptionWindows = captions
     .filter((c) => c.position === "bottom")
     .map((c) => c.window);
@@ -143,17 +156,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         />
       ))}
       <Hook
-        // Background theme priority: Studio prop → project-wide
-        // hookConfig.background.themeOverride → the package's
-        // hook.backgroundTheme → (inside Hook) keyword fallback → default.
-        data={{
-          text: hook.text,
-          backgroundTheme:
-            hookBgTheme ??
-            hookConfig.background.themeOverride ??
-            hook.backgroundTheme ??
-            undefined,
-        }}
+        data={{ text: hook.text, backgroundTheme: resolvedHookBgTheme }}
         window={hookWindow}
         position={hook.position}
         direction={pkg.direction}
@@ -163,6 +166,9 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         fontScale={fontScale}
         reduced={reduced}
       />
+      {/* Render after Hook: the narrow beam and compact impact must remain
+          visible over the solid HookBg. Its restrained size keeps text clear. */}
+      <HookEnergyBridge window={hookWindow} theme={resolvedHookBgTheme} reduced={reduced} />
       <Nameplate
         data={{ channel: authored.channel, episodeTitle: authored.episodeTitle }}
         window={nameplateWindow}

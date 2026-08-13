@@ -15,6 +15,16 @@ export {
   type HookBgSettings,
   type HookBgTheme,
 } from "./HookBg";
+export {
+  HookEnergyBridge,
+  hookEnergyBridgeConfig,
+  hookEnergyTimeline,
+  getHookBgGeometry,
+  type HookEnergyBridgeConfig,
+  type HookEnergyBridgeProps,
+  type HookEnergyTimeline,
+  type HookBgGeometry,
+} from "./HookEnergyBridge";
 export { CaptionShort, type CaptionShortProps } from "./CaptionShort";
 export { CaptionLong, type CaptionLongProps } from "./CaptionLong";
 export { Nameplate, type NameplateProps } from "./Nameplate";

@@ -15,6 +15,13 @@ import {
   HookBgReligionDemo,
   HookBgSocialDemo,
 } from "./overlays/HookBg/demo";
+import {
+  HookEnergyCultureDemo,
+  HookEnergyGeneralDemo,
+  HookEnergyPoliticsDemo,
+  HookEnergyReligionDemo,
+  HookEnergySocialDemo,
+} from "./overlays/HookEnergyBridge/demo";
 import { NameplateDemo } from "./overlays/Nameplate/demo";
 import { ProgressBarDemo } from "./overlays/ProgressBar/demo";
 import { SafeAreaDemo } from "./overlays/SafeArea/demo";
@@ -103,6 +110,12 @@ export const RemotionRoot: React.FC = () => {
         <Composition id="HookBg-Culture" component={HookBgCultureDemo} {...DEMO} />
         <Composition id="HookBg-General" component={HookBgGeneralDemo} {...DEMO} />
         <Composition id="HookBg-Social" component={HookBgSocialDemo} {...DEMO} />
+        <Composition id="HookEnergyBridge-Demo" component={HookEnergyGeneralDemo} {...DEMO} />
+        <Composition id="HookEnergy-Politics" component={HookEnergyPoliticsDemo} {...DEMO} />
+        <Composition id="HookEnergy-Religion" component={HookEnergyReligionDemo} {...DEMO} />
+        <Composition id="HookEnergy-Culture" component={HookEnergyCultureDemo} {...DEMO} />
+        <Composition id="HookEnergy-General" component={HookEnergyGeneralDemo} {...DEMO} />
+        <Composition id="HookEnergy-Social" component={HookEnergySocialDemo} {...DEMO} />
         <Composition id="CaptionShort-Demo" component={CaptionShortDemo} {...DEMO} />
         <Composition id="CaptionLong-Demo" component={CaptionLongDemo} {...DEMO} />
         <Composition id="Nameplate-Demo" component={NameplateDemo} {...DEMO} />

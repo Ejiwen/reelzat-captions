@@ -3,7 +3,6 @@ import React, { useMemo } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { fontFamily, reelTypography } from "../../design/fonts";
 import {
-  overlaySurfaces,
   overlayType,
   palette,
   spacing,
@@ -15,7 +14,7 @@ import { HookBg } from "../HookBg";
 import { resolveHookBgTheme, type HookBgTheme } from "../HookBg/themes";
 import { OverlayRoot } from "../OverlayRoot";
 import { DEFAULT_SAFE_AREA, type OverlayBaseProps, type OverlayTextZone } from "../types";
-import { hookExitProgress, hookWordStyle, shimmerStyle, underlineSweep } from "./animations";
+import { hookExitProgress, hookWordStyle, shimmerStyle } from "./animations";
 import { hookConfig } from "./config";
 
 export type HookProps = OverlayBaseProps & {
@@ -83,7 +82,6 @@ export const Hook: React.FC<HookProps> = ({
     return { fontSize: size, oneLine: fitted.fontSize * 0.98 >= size };
   }, [data.text, baseSize, maxLineWidth]);
 
-  const sweep = underlineSweep(frame, fps, window.startFrame, reduced);
   const words = useMemo(() => tokenizeLine(data.text), [data.text]);
   const shimmer = shimmerStyle({ frame, fps, window, wordCount: words.length, reduced });
   const exitProgress = hookExitProgress(frame, fps, window, words.length);
@@ -166,20 +164,6 @@ export const Hook: React.FC<HookProps> = ({
           {data.text}
         </span>
       </div>
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          height: Math.max(4, fontSize * 0.09),
-          width: fontSize * 3.2,
-          borderRadius: 999,
-          backgroundImage: overlaySurfaces.accentUnderlineGradient,
-          // Sweeps from the inline-start edge — transform only, no layout shift.
-          transform: `translateY(${(-8 * exitProgress).toFixed(2)}px) scaleX(${Math.min(1, Math.max(0, sweep)).toFixed(4)})`,
-          transformOrigin: direction === "rtl" ? "right center" : "left center",
-          opacity: sweep > 0 ? 1 - exitProgress : 0,
-        }}
-      />
     </OverlayRoot>
   );
 };

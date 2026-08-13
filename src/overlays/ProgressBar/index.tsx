@@ -11,7 +11,7 @@ import {
 } from "remotion";
 import { progressBarVisibilityStyle } from "./animations";
 import { progressBarConfig, type ProgressBarConfig } from "./config";
-import { facebookSafeRegionBottomPx, normalizedReelProgress } from "./math";
+import { getProgressBarGeometry, normalizedReelProgress } from "./math";
 
 export type ProgressBarProps = {
   direction?: "rtl" | "ltr";
@@ -34,23 +34,17 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   }
 
   const progress = normalizedReelProgress(frame, durationInFrames);
-  const scale = width / 1080;
-  const size = config.ringSizePx * scale;
-  const logoDiscSize = config.logoDiscSizePx * scale;
+  // Single source of truth for the circle's placement and size — shared with
+  // HookEnergyBridge so the energy always originates from the true centre.
+  const geometry = getProgressBarGeometry({ width, height, config });
+  const { scale, centerX, centerY, ringRadius: radius } = geometry;
+  const size = geometry.ringSizePx;
+  const logoDiscSize = geometry.logoRadius * 2;
   const trackWidth = config.trackHeightPx * scale;
   const indicatorSize = config.indicatorSizePx * scale;
   const borderWidth = config.indicatorBorderWidthPx * scale;
-  const outerClearance = Math.max(trackWidth, indicatorSize + borderWidth * 2);
-  const radius = (size - outerClearance) / 2;
   const center = size / 2;
   const circumference = Math.PI * 2 * radius;
-  const safeBottom = facebookSafeRegionBottomPx(
-    width,
-    height,
-    config.facebookSafeAspectRatio,
-  );
-  const centerY = safeBottom - config.safeAreaInsetPx * scale;
-  const centerX = width / 2;
   const angle = (-90 + progress * 360) * (Math.PI / 180);
   const indicatorX = center + radius * Math.cos(angle);
   const indicatorY = center + radius * Math.sin(angle);

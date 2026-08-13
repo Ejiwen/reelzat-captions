@@ -54,6 +54,12 @@ export type HookBgConfig = {
   entranceFrames: number;
   entranceScaleFrom: number;
   entranceTranslateYPx: number;
+  // The energy beam arrives after ignition + travel. Until then HookBg stays
+  // clipped; it then opens radially from the lower impact point.
+  energyRevealEnabled: boolean;
+  energyRevealDelayFrames: number;
+  energyRevealFrames: number;
+  energyRevealOriginYPct: number;
   // The exit eases the veil slightly outward while it dissolves.
   exitScaleTo: number;
 

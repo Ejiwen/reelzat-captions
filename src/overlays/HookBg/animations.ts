@@ -42,15 +42,36 @@ export const hookBgEntrance = ({ frame, fps, windowStartFrame, config }: HookBgM
 // uniformly; the band is centred vertically only and scales on Y alone, so
 // its edge-to-edge width never reveals a horizontal gap mid-entrance.
 export const hookBgContainerStyle = (ctx: HookBgMotionCtx): React.CSSProperties => {
-  const { config, exitProgress, reduced, pxScale } = ctx;
+  const { config, exitProgress, reduced, pxScale, frame, fps, windowStartFrame } = ctx;
   const entrance = hookBgEntrance(ctx);
   const opacity = config.opacity * entrance * (1 - exitProgress);
   const isBand = config.shape === "band";
   const baseTransform = isBand ? "translateY(-50%)" : "translate(-50%, -50%)";
 
+  const revealStart = windowStartFrame + atFps(config.energyRevealDelayFrames, fps);
+  const revealEnd = revealStart + atFps(config.energyRevealFrames, fps);
+  const revealRadius = config.energyRevealEnabled && !reduced
+    ? interpolate(frame, [revealStart, revealEnd], [0, 145], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.out(Easing.cubic),
+      })
+    : 145;
+  const revealFeatherStart = Math.max(0, revealRadius - 13);
+  const revealMask = `radial-gradient(circle at 50% ${config.energyRevealOriginYPct}%, black 0%, black ${revealFeatherStart.toFixed(2)}%, transparent ${revealRadius.toFixed(2)}%)`;
+  const shapeMask = config.shape === "band"
+    ? "linear-gradient(to bottom, transparent 0%, black 17%, black 83%, transparent 100%)"
+    : "radial-gradient(ellipse at center, black 0%, black 52%, rgba(0,0,0,0.85) 66%, transparent 88%)";
+  const maskStyle: React.CSSProperties = {
+    WebkitMaskImage: `${shapeMask}, ${revealMask}`,
+    maskImage: `${shapeMask}, ${revealMask}`,
+    WebkitMaskComposite: "source-in",
+    maskComposite: "intersect",
+  };
+
   if (reduced) {
     // Reduced mode: no spatial movement — a plain deterministic cross-fade.
-    return { opacity, transform: baseTransform };
+    return { opacity, transform: baseTransform, ...maskStyle };
   }
 
   const entranceScale = config.entranceScaleFrom + (1 - config.entranceScaleFrom) * entrance;
@@ -62,6 +83,7 @@ export const hookBgContainerStyle = (ctx: HookBgMotionCtx): React.CSSProperties 
   return {
     opacity,
     transform: `${baseTransform} translateY(${translateY.toFixed(2)}px) ${scalePart}`,
+    ...maskStyle,
   };
 };
 

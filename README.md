@@ -90,6 +90,7 @@ under **Components/** in Studio so it can be previewed and tuned in isolation.
 | --- | --- |
 | `Hook/` | The opening statement — largest type, gold word cascade in/out, one shimmer pass, accent underline. Reads within its first 3 words. Placement/size/hold live in `Hook/config.ts`. |
 | `HookBg/` | Solid-gradient motion background behind the hook: five editorial themes (`politics`, `religion`, `culture`, `general`, `social`), layered colour fields + one entrance light sweep, exit synced to the hook. Theme via Studio prop, per-reel `hook.backgroundTheme`, or keyword fallback. |
+| `HookEnergyBridge/` | The brand connection: the Wazin circle emits one restrained themed pulse, a soft light field travels a bowed path and resolves into the HookBg; a quieter return pulse plays on exit. Shares the ProgressBar's exact geometry; invisible during the reading hold. |
 | `CaptionShort/` | One big authored line, auto-fit, never wrapped. Word-stagger entrance. |
 | `CaptionLong/` | Exactly two balanced lines, one font size for both, flat word-stagger across the break. |
 | `Nameplate/` | Channel + episode title chip in the safe-area corner. Enters as the hook exits; yields (fades out) while a caption shares its band. |

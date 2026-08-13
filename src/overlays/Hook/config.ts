@@ -48,6 +48,12 @@ export const hookConfig: HookConfig = {
     entranceFrames: 18,
     entranceScaleFrom: 0.96,
     entranceTranslateYPx: 12,
+    energyRevealEnabled: true,
+    // Kept in sync with HookEnergyBridge ignitionFrames + travelFrames.
+    energyRevealDelayFrames: 20,
+    energyRevealFrames: 10,
+    // Same lower-band destination as HookEnergyBridge targetOffsetPct: 29.
+    energyRevealOriginYPct: 79,
     exitScaleTo: 1.03,
     // Stable-period drift — almost imperceptible by design.
     driftAmountPx: 26,
