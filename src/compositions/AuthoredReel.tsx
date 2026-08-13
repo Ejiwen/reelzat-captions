@@ -1,5 +1,14 @@
 import React from "react";
-import { AbsoluteFill, OffthreadVideo, Sequence, staticFile, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  Easing,
+  OffthreadVideo,
+  Sequence,
+  interpolate,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { useReelPackage } from "../ingest/useReelPackage";
 import type { ReelPackage, ResolvedAuthoredCaption } from "../ingest/resolve";
 import {
@@ -37,15 +46,49 @@ export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
   const pkg = useReelPackage(props.packageDir, props.clipId);
 
   return (
-    <AbsoluteFill>
+    <AbsoluteFill
+      style={{
+        backgroundColor:
+          pkg && props.mode === "burn" ? outroConfig.backgroundColor : undefined,
+      }}
+    >
       {pkg && props.mode === "burn" ? (
         // premountFor keeps the video mounted-and-buffered ahead of time so
         // batch renders never stall waiting for the first frames.
         (<Sequence durationInFrames={pkg.media.durationInFrames} premountFor={60}>
-          <OffthreadVideo src={staticFile(pkg.media.videoSrc)} pauseWhenBuffering />
+          <FadingSourceVideo
+            src={pkg.media.videoSrc}
+            durationInFrames={pkg.media.durationInFrames}
+          />
         </Sequence>)
       ) : null}
       {pkg ? <OverlayStack pkg={pkg} {...props} /> : null}
+    </AbsoluteFill>
+  );
+};
+
+const FadingSourceVideo: React.FC<{ src: string; durationInFrames: number }> = ({
+  src,
+  durationInFrames,
+}) => {
+  const frame = useCurrentFrame();
+  const fade = interpolate(
+    frame,
+    [
+      Math.max(0, durationInFrames - outroConfig.transitionFadeFrames),
+      Math.max(1, durationInFrames - 1),
+    ],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+
+  return (
+    <AbsoluteFill style={{ opacity: fade }}>
+      <OffthreadVideo src={staticFile(src)} pauseWhenBuffering volume={fade} />
     </AbsoluteFill>
   );
 };
@@ -145,12 +188,15 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
 
   return (
     <AbsoluteFill>
-      <ProgressBar
-        direction={pkg.direction}
-        reduced={reduced}
-        interactionWindows={captions.map((caption) => caption.window)}
-        theme={resolvedHookBgTheme}
-      />
+      <Sequence durationInFrames={videoDurationInFrames}>
+        <ProgressBar
+          direction={pkg.direction}
+          reduced={reduced}
+          interactionWindows={captions.map((caption) => caption.window)}
+          theme={resolvedHookBgTheme}
+          progressDurationInFrames={videoDurationInFrames}
+        />
+      </Sequence>
       {mode === "burn" ? (
         <CaptionScrim windows={bottomCaptionWindows} bottomPct={pkg.safeArea.bottomPct} />
       ) : null}

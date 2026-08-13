@@ -1,11 +1,20 @@
 import React from "react";
-import { AbsoluteFill, OffthreadVideo, Sequence, staticFile } from "remotion";
+import {
+  AbsoluteFill,
+  Easing,
+  OffthreadVideo,
+  Sequence,
+  interpolate,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { CaptionPage } from "../captions/CaptionPage";
 import { useActiveSegment } from "../captions/useActiveSegment";
 import { palette, scrim } from "../design/tokens";
 import { useReelPackage } from "../ingest/useReelPackage";
 import type { ReelPackage } from "../ingest/resolve";
-import { ProgressBar, SafeAreaGuides } from "../overlays";
+import { Outro, ProgressBar, SafeAreaGuides, outroConfig } from "../overlays";
 import type { AsrCaptionedProps } from "../schema/reelProps";
 import type { ResolvedCaptions } from "../schema/captions";
 import { themes } from "../themes";
@@ -16,16 +25,31 @@ import { themes } from "../themes";
 // (public/video.mp4 + captions.json) stays registered in Root untouched.
 export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
   const pkg = useReelPackage(props.packageDir, props.clipId);
+  const { durationInFrames } = useVideoConfig();
 
   return (
-    <AbsoluteFill>
+    <AbsoluteFill
+      style={{
+        backgroundColor:
+          pkg && props.mode === "burn" ? outroConfig.backgroundColor : undefined,
+      }}
+    >
       {pkg && props.mode === "burn" ? (
-        <Sequence premountFor={60}>
-          <OffthreadVideo src={staticFile(pkg.media.videoSrc)} pauseWhenBuffering />
+        <Sequence durationInFrames={pkg.media.durationInFrames} premountFor={60}>
+          <FadingSourceVideo
+            src={pkg.media.videoSrc}
+            durationInFrames={pkg.media.durationInFrames}
+          />
         </Sequence>
       ) : null}
       {pkg ? (
-        <ProgressBar direction={pkg.direction} reduced={props.reduced} />
+        <Sequence durationInFrames={pkg.media.durationInFrames}>
+          <ProgressBar
+            direction={pkg.direction}
+            reduced={props.reduced}
+            progressDurationInFrames={pkg.media.durationInFrames}
+          />
+        </Sequence>
       ) : null}
       {pkg && props.mode === "burn" ? (
         <BottomScrim bottomPct={props.safeAreaBottomPct ?? pkg.safeArea.bottomPct} />
@@ -33,6 +57,43 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
       {pkg?.asr.captions ? (
         <CaptionLayer pkg={pkg} captions={pkg.asr.captions} {...props} />
       ) : null}
+      {pkg && outroConfig.enabled ? (
+        <Sequence
+          from={pkg.media.durationInFrames}
+          durationInFrames={Math.max(1, durationInFrames - pkg.media.durationInFrames)}
+        >
+          <Outro
+            durationInFrames={Math.max(1, durationInFrames - pkg.media.durationInFrames)}
+            reduced={props.reduced}
+          />
+        </Sequence>
+      ) : null}
+    </AbsoluteFill>
+  );
+};
+
+const FadingSourceVideo: React.FC<{ src: string; durationInFrames: number }> = ({
+  src,
+  durationInFrames,
+}) => {
+  const frame = useCurrentFrame();
+  const fade = interpolate(
+    frame,
+    [
+      Math.max(0, durationInFrames - outroConfig.transitionFadeFrames),
+      Math.max(1, durationInFrames - 1),
+    ],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+
+  return (
+    <AbsoluteFill style={{ opacity: fade }}>
+      <OffthreadVideo src={staticFile(src)} pauseWhenBuffering volume={fade} />
     </AbsoluteFill>
   );
 };

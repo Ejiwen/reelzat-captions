@@ -99,7 +99,10 @@ export const RemotionRoot: React.FC = () => {
                 clipId: reel.id,
                 ...defaultAsrCaptionedProps,
               }}
-              durationInFrames={reel.durationInFrames}
+              durationInFrames={
+                reel.durationInFrames +
+                (outroConfig.enabled ? Math.round(outroConfig.durationSeconds * reel.fps) : 0)
+              }
               width={reel.width}
               height={reel.height}
               fps={reel.fps}

@@ -30,6 +30,9 @@ export type ProgressBarProps = {
   interactionWindows?: OverlayWindow[];
   // Uses the same resolved editorial identity as HookBg and captions.
   theme?: HookBgTheme;
+  // Keep progress tied to the source reel when the composition has a
+  // post-roll outro appended to it.
+  progressDurationInFrames?: number;
 };
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
@@ -38,6 +41,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   config: overrides,
   interactionWindows = [],
   theme,
+  progressDurationInFrames,
 }) => {
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
@@ -53,7 +57,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     return null;
   }
 
-  const progress = normalizedReelProgress(frame, durationInFrames);
+  const reelDurationInFrames = progressDurationInFrames ?? durationInFrames;
+  const progress = normalizedReelProgress(frame, reelDurationInFrames);
   // Single source of truth for the circle's placement and size — shared with
   // HookEnergyBridge so the energy always originates from the true centre.
   const geometry = getProgressBarGeometry({ width, height, config });
@@ -93,7 +98,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const animatedLogoOpacity = 1 - staticLogoOpacity;
   const visibility = progressBarVisibilityStyle({
     frame,
-    durationInFrames,
+    durationInFrames: reelDurationInFrames,
     fps,
     config,
     reduced,

@@ -3,6 +3,7 @@
 export type OutroConfig = {
   enabled: boolean;
   durationSeconds: number;
+  transitionFadeFrames: number;
   coverFrames: number;
   logoTravelStartFrame: number;
   logoTravelFrames: number;
@@ -25,6 +26,7 @@ export type OutroConfig = {
 export const outroConfig: OutroConfig = {
   enabled: true,
   durationSeconds: 4.8,
+  transitionFadeFrames: 30,
   coverFrames: 26,
   logoTravelStartFrame: 5,
   logoTravelFrames: 28,
