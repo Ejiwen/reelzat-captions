@@ -1,5 +1,11 @@
 import type { HookBgPalette, HookBgTheme } from "./themes";
 
+// The silhouette of the background:
+//  - "band": edge-to-edge horizontal colour band, feathered only top and
+//    bottom — reads as a cinematic grade, never as a shape (the default)
+//  - "ellipse": the earlier feathered oval veil, kept for reuse elsewhere.
+export type HookBgShape = "band" | "ellipse";
+
 // Every visual, thematic, placement and motion control of the hook
 // background. Production values live in ../Hook/config.ts under
 // `hookConfig.background`, keeping all hook controls in one place.
@@ -27,7 +33,10 @@ export type HookBgConfig = {
   // Used when neither the reel package nor the caller picks a theme.
   defaultTheme: HookBgTheme;
 
+  // Silhouette — see HookBgShape.
+  shape: HookBgShape;
   // Size relative to the Hook layout band (not the full composition).
+  // In "band" shape the width is ignored: the band always runs edge to edge.
   widthPct: number;
   heightPct: number;
 

@@ -6,7 +6,7 @@ import {
   hookBgSweepStyle,
   type HookBgMotionCtx,
 } from "./animations";
-import { parseHookBgTheme, type HookBgTheme } from "./themes";
+import { parseHookBgTheme, type HookBgPalette, type HookBgTheme } from "./themes";
 import type { HookBgConfig } from "./types";
 
 export type HookBgProps = {
@@ -24,15 +24,81 @@ export type HookBgProps = {
 
 // A premium solid-gradient motion background behind the hook — layered
 // colour fields rather than a card:
-//   base veil  → darkest theme tone, radial falloff, carries text contrast
+//   base       → darkest theme tone, carries text contrast
 //   primary    → large restrained gradient field, offset top-inline
 //   secondary  → softer complementary mass, offset the other way
 //   sweep      → one broad diagonal highlight pass during the entrance
 //   vignette   → subtle edge darkening for text separation
-// The whole stack lives inside a feathered elliptical mask, so it dissolves
-// into the video at every edge — no rectangle, no visible panel. It inherits
-// its layout box from Hook's configured Y band and always sits under the
-// hook text (Hook renders it at zIndex 0).
+//
+// Two silhouettes (config.shape):
+//   "band"    — edge-to-edge horizontal strip, feathered only top and
+//               bottom. It reads as a cinematic colour grade across the
+//               frame, never as a shape with an outline. (default)
+//   "ellipse" — the earlier feathered oval veil.
+// Either way it inherits its layout box from Hook's configured Y band and
+// always sits under the hook text (Hook renders it at zIndex 0).
+
+// Shape geometry. The band must escape its parent (the hook layout zone is
+// only ~86% of the frame wide) to reach the true frame edges; scaling is
+// vertical-only there so entrances never reveal a horizontal gap.
+const shapeContainerStyle = (
+  config: HookBgConfig,
+  palette: HookBgPalette,
+  basePct: number,
+): React.CSSProperties =>
+  config.shape === "band"
+    ? {
+        left: "-12%",
+        right: "-12%",
+        top: "50%",
+        height: `${config.heightPct}%`,
+        // Vertical feather only — horizontally the band runs edge to edge.
+        // Wide plateau: both hook lines must sit on FULL-strength band, the
+        // feather belongs above/below the text, never behind it.
+        WebkitMaskImage:
+          "linear-gradient(to bottom, transparent 0%, black 17%, black 83%, transparent 100%)",
+        maskImage:
+          "linear-gradient(to bottom, transparent 0%, black 17%, black 83%, transparent 100%)",
+        // Flat base tone; the mask supplies the falloff.
+        background: `color-mix(in oklch, ${palette.base} ${basePct}%, transparent)`,
+      }
+    : {
+        left: "50%",
+        top: "50%",
+        width: `${config.widthPct}%`,
+        height: `${config.heightPct}%`,
+        borderRadius: "50%",
+        // Feathered elliptical mask with a wide stable plateau so the veil
+        // stays strong under the OUTER words too.
+        WebkitMaskImage:
+          "radial-gradient(ellipse at center, black 0%, black 52%, rgba(0,0,0,0.85) 66%, transparent 88%)",
+        maskImage:
+          "radial-gradient(ellipse at center, black 0%, black 52%, rgba(0,0,0,0.85) 66%, transparent 88%)",
+        background: `radial-gradient(ellipse at center,
+          color-mix(in oklch, ${palette.base} ${basePct}%, transparent) 0%,
+          color-mix(in oklch, ${palette.base} ${Math.round(basePct * 0.85)}%, transparent) 48%,
+          color-mix(in oklch, ${palette.base} ${Math.round(basePct * 0.45)}%, transparent) 68%,
+          transparent 88%)`,
+      };
+
+const vignetteStyle = (config: HookBgConfig, palette: HookBgPalette): React.CSSProperties =>
+  config.shape === "band"
+    ? {
+        // Reinforce the top/bottom feather for text separation.
+        background: `linear-gradient(to bottom,
+          color-mix(in oklch, ${palette.vignette} 60%, transparent) 0%,
+          transparent 26%,
+          transparent 74%,
+          color-mix(in oklch, ${palette.vignette} 60%, transparent) 100%)`,
+      }
+    : {
+        borderRadius: "50%",
+        background: `radial-gradient(ellipse at center,
+          transparent 46%,
+          color-mix(in oklch, ${palette.vignette} 55%, transparent) 74%,
+          ${palette.vignette} 100%)`,
+      };
+
 export const HookBg: React.FC<HookBgProps> = ({
   windowStartFrame,
   exitProgress,
@@ -68,33 +134,18 @@ export const HookBg: React.FC<HookBgProps> = ({
     config.backdropBlurPx > 0
       ? `blur(${(config.backdropBlurPx * ctx.pxScale).toFixed(2)}px) saturate(0.9)`
       : undefined;
+  const fieldRadius = config.shape === "band" ? undefined : "50%";
+  const fieldInset = config.shape === "band" ? "-45% -4%" : "-18% -12%";
 
   return (
     <div
       aria-hidden
       style={{
         position: "absolute",
-        left: "50%",
-        top: "50%",
-        width: `${config.widthPct}%`,
-        height: `${config.heightPct}%`,
         overflow: "hidden",
-        borderRadius: "50%",
-        // Feathered elliptical mask — a wide stable plateau so the veil stays
-        // strong under the OUTER words too, then a soft dissolve into video.
-        WebkitMaskImage:
-          "radial-gradient(ellipse at center, black 0%, black 52%, rgba(0,0,0,0.85) 66%, transparent 88%)",
-        maskImage:
-          "radial-gradient(ellipse at center, black 0%, black 52%, rgba(0,0,0,0.85) 66%, transparent 88%)",
         pointerEvents: "none",
         zIndex: 0,
-        // Base veil: the darkest, most stable tone of the theme. The plateau
-        // extends to ~48% so text at the band edges keeps full contrast.
-        background: `radial-gradient(ellipse at center,
-          color-mix(in oklch, ${palette.base} ${basePct}%, transparent) 0%,
-          color-mix(in oklch, ${palette.base} ${Math.round(basePct * 0.85)}%, transparent) 48%,
-          color-mix(in oklch, ${palette.base} ${Math.round(basePct * 0.45)}%, transparent) 68%,
-          transparent 88%)`,
+        ...shapeContainerStyle(config, palette, basePct),
         WebkitBackdropFilter: backdropFilter,
         backdropFilter,
         ...hookBgContainerStyle(ctx),
@@ -104,8 +155,8 @@ export const HookBg: React.FC<HookBgProps> = ({
       <div
         style={{
           position: "absolute",
-          inset: "-18% -12%",
-          borderRadius: "50%",
+          inset: fieldInset,
+          borderRadius: fieldRadius,
           opacity: config.primaryFieldOpacity,
           background: `radial-gradient(ellipse 62% 58% at 31% 26%,
             ${palette.primary} 0%,
@@ -118,8 +169,8 @@ export const HookBg: React.FC<HookBgProps> = ({
       <div
         style={{
           position: "absolute",
-          inset: "-18% -12%",
-          borderRadius: "50%",
+          inset: fieldInset,
+          borderRadius: fieldRadius,
           opacity: config.secondaryFieldOpacity,
           background: `radial-gradient(ellipse 58% 54% at 73% 78%,
             ${palette.secondary} 0%,
@@ -133,12 +184,8 @@ export const HookBg: React.FC<HookBgProps> = ({
         style={{
           position: "absolute",
           inset: 0,
-          borderRadius: "50%",
           opacity: config.vignetteOpacity,
-          background: `radial-gradient(ellipse at center,
-            transparent 46%,
-            color-mix(in oklch, ${palette.vignette} 55%, transparent) 74%,
-            ${palette.vignette} 100%)`,
+          ...vignetteStyle(config, palette),
         }}
       />
       {/* One-pass directional light sweep, entrance only. */}
@@ -173,4 +220,4 @@ export {
   type HookBgTheme,
   type HookBgThemeInput,
 } from "./themes";
-export type { HookBgConfig, HookBgSettings } from "./types";
+export type { HookBgConfig, HookBgSettings, HookBgShape } from "./types";

@@ -37,25 +37,31 @@ export const hookBgEntrance = ({ frame, fps, windowStartFrame, config }: HookBgM
     },
   );
 
-// Container opacity + transform across all three phases.
+// Container opacity + transform across all three phases. The base transform
+// depends on the silhouette: the ellipse is centred on both axes and scales
+// uniformly; the band is centred vertically only and scales on Y alone, so
+// its edge-to-edge width never reveals a horizontal gap mid-entrance.
 export const hookBgContainerStyle = (ctx: HookBgMotionCtx): React.CSSProperties => {
   const { config, exitProgress, reduced, pxScale } = ctx;
   const entrance = hookBgEntrance(ctx);
   const opacity = config.opacity * entrance * (1 - exitProgress);
+  const isBand = config.shape === "band";
+  const baseTransform = isBand ? "translateY(-50%)" : "translate(-50%, -50%)";
 
   if (reduced) {
     // Reduced mode: no spatial movement — a plain deterministic cross-fade.
-    return { opacity, transform: "translate(-50%, -50%)" };
+    return { opacity, transform: baseTransform };
   }
 
   const entranceScale = config.entranceScaleFrom + (1 - config.entranceScaleFrom) * entrance;
   const scale = entranceScale + (config.exitScaleTo - 1) * exitProgress;
   const translateY =
     (config.entranceTranslateYPx * (1 - entrance) - 6 * exitProgress) * pxScale;
+  const scalePart = isBand ? `scaleY(${scale.toFixed(4)})` : `scale(${scale.toFixed(4)})`;
 
   return {
     opacity,
-    transform: `translate(-50%, -50%) translateY(${translateY.toFixed(2)}px) scale(${scale.toFixed(4)})`,
+    transform: `${baseTransform} translateY(${translateY.toFixed(2)}px) ${scalePart}`,
   };
 };
 

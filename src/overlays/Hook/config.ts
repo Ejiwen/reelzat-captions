@@ -30,13 +30,16 @@ export const hookConfig: HookConfig = {
     // null → per-reel: package hook.backgroundTheme → keywords → defaultTheme.
     themeOverride: "culture",
     defaultTheme: "general",
-    // Size relative to the Hook layout band — generous so the feathered edge
-    // falls outside the text, never under the outer words.
+    // "band" = edge-to-edge cinematic strip (recommended); "ellipse" = the
+    // earlier oval veil.
+    shape: "band",
+    // Height relative to the Hook layout band; width only applies to the
+    // ellipse shape (the band always runs edge to edge).
     widthPct: 140,
-    heightPct: 122,
+    heightPct: 146,
     // Master + per-layer strengths (0..1).
     opacity: 1,
-    baseOpacity: 0.6,
+    baseOpacity: 0.66,
     primaryFieldOpacity: 0.66,
     secondaryFieldOpacity: 0.44,
     vignetteOpacity: 0.42,

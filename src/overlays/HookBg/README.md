@@ -5,6 +5,18 @@ colour fields, not a card and not a photo texture. Its job is to strengthen
 hook readability over any video while staying visually subordinate to the
 text. Everything animates deterministically from Remotion frame state.
 
+## Shape
+
+`hookConfig.background.shape`:
+
+- **`"band"` (default)** — an edge-to-edge horizontal colour strip behind the
+  hook, feathered only at its top and bottom. It has no outline of its own,
+  so it reads as a cinematic colour grade across the frame, not as a shape.
+  `widthPct` is ignored (always full width); `heightPct` sets the strip
+  height relative to the hook band; entrances scale on Y only so a gap can
+  never appear at the frame edges.
+- **`"ellipse"`** — the earlier feathered oval veil, kept for reuse.
+
 ## Visual structure (back → front)
 
 1. **Base veil** — the darkest, most stable tone of the theme, as a radial
