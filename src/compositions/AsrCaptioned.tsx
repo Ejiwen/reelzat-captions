@@ -5,7 +5,14 @@ import { useActiveSegment } from "../captions/useActiveSegment";
 import { palette, scrim } from "../design/tokens";
 import { useReelPackage } from "../ingest/useReelPackage";
 import type { ReelPackage } from "../ingest/resolve";
-import { Outro, ProgressBar, SafeAreaGuides, outroConfig } from "../overlays";
+import {
+  MidReelCta,
+  Outro,
+  ProgressBar,
+  SafeAreaGuides,
+  findMidReelCtaWindow,
+  outroConfig,
+} from "../overlays";
 import { hookConfig } from "../overlays/Hook/config";
 import { resolveHookBgTheme } from "../overlays/HookBg/themes";
 import type { AsrCaptionedProps } from "../schema/reelProps";
@@ -19,7 +26,7 @@ import { SourceVideoLayer } from "./SourceVideoLayer";
 // (public/video.mp4 + captions.json) stays registered in Root untouched.
 export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
   const pkg = useReelPackage(props.packageDir, props.clipId);
-  const { durationInFrames } = useVideoConfig();
+  const { durationInFrames, fps } = useVideoConfig();
   const sourceTheme = pkg
     ? resolveHookBgTheme({
         explicit: hookConfig.background.themeOverride ?? undefined,
@@ -27,16 +34,32 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
         fallback: hookConfig.background.defaultTheme,
       })
     : hookConfig.background.defaultTheme;
+  const midReelCtaWindow = pkg
+    ? findMidReelCtaWindow({
+        durationInFrames: pkg.media.durationInFrames,
+        fps,
+        occupiedWindows:
+          pkg.asr.captions?.segments.map((segment) => ({
+            startFrame: Math.floor((segment.startMs / 1000) * fps),
+            endFrame: Math.ceil((segment.endMs / 1000) * fps),
+          })) ?? [],
+      })
+    : null;
 
   return (
     <AbsoluteFill
       style={{
         backgroundColor:
-          pkg && props.mode === "burn" ? outroConfig.backgroundColor : undefined,
+          pkg && props.mode === "burn"
+            ? outroConfig.backgroundColor
+            : undefined,
       }}
     >
       {pkg && props.mode === "burn" ? (
-        <Sequence durationInFrames={pkg.media.durationInFrames} premountFor={60}>
+        <Sequence
+          durationInFrames={pkg.media.durationInFrames}
+          premountFor={60}
+        >
           <SourceVideoLayer
             src={pkg.media.videoSrc}
             durationInFrames={pkg.media.durationInFrames}
@@ -47,15 +70,26 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
       ) : null}
       {pkg ? (
         <Sequence durationInFrames={pkg.media.durationInFrames}>
+          {midReelCtaWindow ? (
+            <MidReelCta
+              window={midReelCtaWindow}
+              theme={sourceTheme}
+              reduced={props.reduced}
+            />
+          ) : null}
           <ProgressBar
             direction={pkg.direction}
             reduced={props.reduced}
+            interactionWindows={midReelCtaWindow ? [midReelCtaWindow] : []}
+            theme={sourceTheme}
             progressDurationInFrames={pkg.media.durationInFrames}
           />
         </Sequence>
       ) : null}
       {pkg && props.mode === "burn" ? (
-        <BottomScrim bottomPct={props.safeAreaBottomPct ?? pkg.safeArea.bottomPct} />
+        <BottomScrim
+          bottomPct={props.safeAreaBottomPct ?? pkg.safeArea.bottomPct}
+        />
       ) : null}
       {pkg?.asr.captions ? (
         <CaptionLayer pkg={pkg} captions={pkg.asr.captions} {...props} />
@@ -63,10 +97,16 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
       {pkg && outroConfig.enabled ? (
         <Sequence
           from={pkg.media.durationInFrames}
-          durationInFrames={Math.max(1, durationInFrames - pkg.media.durationInFrames)}
+          durationInFrames={Math.max(
+            1,
+            durationInFrames - pkg.media.durationInFrames,
+          )}
         >
           <Outro
-            durationInFrames={Math.max(1, durationInFrames - pkg.media.durationInFrames)}
+            durationInFrames={Math.max(
+              1,
+              durationInFrames - pkg.media.durationInFrames,
+            )}
             reduced={props.reduced}
           />
         </Sequence>
@@ -91,7 +131,15 @@ const BottomScrim: React.FC<{ bottomPct: number }> = ({ bottomPct }) => (
 
 const CaptionLayer: React.FC<
   AsrCaptionedProps & { pkg: ReelPackage; captions: ResolvedCaptions }
-> = ({ pkg, captions, theme, offsetMs, fontScale, safeAreaBottomPct, debug }) => {
+> = ({
+  pkg,
+  captions,
+  theme,
+  offsetMs,
+  fontScale,
+  safeAreaBottomPct,
+  debug,
+}) => {
   const bottomPct = safeAreaBottomPct ?? pkg.safeArea.bottomPct;
   const active = useActiveSegment(captions.segments, offsetMs);
 

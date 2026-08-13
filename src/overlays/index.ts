@@ -36,6 +36,12 @@ export {
   type CaptionEnergySurfaceProps,
 } from "./CaptionEnergy";
 export { Nameplate, type NameplateProps } from "./Nameplate";
+export {
+  MidReelCta,
+  findMidReelCtaWindow,
+  midReelCtaConfig,
+  type MidReelCtaProps,
+} from "./MidReelCta";
 export { Outro, outroConfig, type OutroConfig, type OutroProps } from "./Outro";
 export {
   ProgressBar,

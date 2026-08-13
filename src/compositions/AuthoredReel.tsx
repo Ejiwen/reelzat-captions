@@ -7,11 +7,13 @@ import {
   CaptionEnergyBridge,
   CaptionShort,
   Hook,
+  MidReelCta,
   Nameplate,
   Outro,
   ProgressBar,
   SafeAreaGuides,
   WindowTimeline,
+  findMidReelCtaWindow,
   type OverlayPosition,
   type OverlayTextZone,
   type TimelineItem,
@@ -52,20 +54,25 @@ export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
     <AbsoluteFill
       style={{
         backgroundColor:
-          pkg && props.mode === "burn" ? outroConfig.backgroundColor : undefined,
+          pkg && props.mode === "burn"
+            ? outroConfig.backgroundColor
+            : undefined,
       }}
     >
       {pkg && props.mode === "burn" ? (
         // premountFor keeps the video mounted-and-buffered ahead of time so
         // batch renders never stall waiting for the first frames.
-        (<Sequence durationInFrames={pkg.media.durationInFrames} premountFor={60}>
+        <Sequence
+          durationInFrames={pkg.media.durationInFrames}
+          premountFor={60}
+        >
           <SourceVideoLayer
             src={pkg.media.videoSrc}
             durationInFrames={pkg.media.durationInFrames}
             reduced={props.reduced}
             theme={sourceTheme}
           />
-        </Sequence>)
+        </Sequence>
       ) : null}
       {pkg ? <OverlayStack pkg={pkg} {...props} /> : null}
     </AbsoluteFill>
@@ -90,7 +97,10 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   debug,
 }) => {
   const { fps, durationInFrames } = useVideoConfig();
-  const videoDurationInFrames = Math.min(pkg.media.durationInFrames, durationInFrames);
+  const videoDurationInFrames = Math.min(
+    pkg.media.durationInFrames,
+    durationInFrames,
+  );
   const authored = pkg.authored;
 
   if (!authored) {
@@ -133,7 +143,10 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   // The composition is longer than the source by exactly the outro duration.
   // The video Sequence ends first, guaranteeing that neither its image nor
   // its audio continues underneath the brand card.
-  const outroDurationInFrames = Math.max(1, durationInFrames - videoDurationInFrames);
+  const outroDurationInFrames = Math.max(
+    1,
+    durationInFrames - videoDurationInFrames,
+  );
   const outroWindow = {
     startFrame: videoDurationInFrames,
     endFrame: durationInFrames,
@@ -145,7 +158,10 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   // → keyword fallback on the hook text → configured default.
   const resolvedHookBgTheme = resolveHookBgTheme({
     explicit:
-      hookBgTheme ?? hookConfig.background.themeOverride ?? hook.backgroundTheme ?? undefined,
+      hookBgTheme ??
+      hookConfig.background.themeOverride ??
+      hook.backgroundTheme ??
+      undefined,
     text: hook.text,
     fallback: hookConfig.background.defaultTheme,
   });
@@ -154,6 +170,14 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
     .filter((c) => c.position === "bottom")
     .map((c) => c.window);
 
+  // This lower-third identity moment may coexist with captions: their spatial
+  // zones are independent, so keep the CTA truly centred in reel time.
+  const midReelCtaWindow = findMidReelCtaWindow({
+    durationInFrames: videoDurationInFrames,
+    fps,
+    occupiedWindows: [hookWindow, ...captions.map((caption) => caption.window)],
+  });
+
   const timeline: TimelineItem[] = [
     { label: "hook", window: hookWindow, position: hook.position },
     ...captions.map((c, i) => ({
@@ -161,33 +185,59 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
       window: c.window,
       position: c.position,
     })),
-    { label: "nameplate", window: nameplateWindow, position: nameplatePosition },
+    ...(midReelCtaWindow
+      ? [
+          {
+            label: "mid-reel CTA",
+            window: midReelCtaWindow,
+            position: "bottom" as const,
+          },
+        ]
+      : []),
+    {
+      label: "nameplate",
+      window: nameplateWindow,
+      position: nameplatePosition,
+    },
     { label: "outro", window: outroWindow, position: "bottom" },
   ];
 
   return (
     <AbsoluteFill>
       <Sequence durationInFrames={videoDurationInFrames}>
+        {midReelCtaWindow ? (
+          <MidReelCta
+            window={midReelCtaWindow}
+            theme={resolvedHookBgTheme}
+            reduced={reduced}
+          />
+        ) : null}
         <ProgressBar
           direction={pkg.direction}
           reduced={reduced}
-          interactionWindows={captions.map((caption) => caption.window)}
+          interactionWindows={[
+            ...captions.map((caption) => caption.window),
+            ...(midReelCtaWindow ? [midReelCtaWindow] : []),
+          ]}
           theme={resolvedHookBgTheme}
           progressDurationInFrames={videoDurationInFrames}
         />
       </Sequence>
       {mode === "burn" ? (
-        <CaptionScrim windows={bottomCaptionWindows} bottomPct={pkg.safeArea.bottomPct} />
+        <CaptionScrim
+          windows={bottomCaptionWindows}
+          bottomPct={pkg.safeArea.bottomPct}
+        />
       ) : null}
       {asrSubtitles && pkg.asr.words.length > 0 ? (
         // Just ABOVE the caption strip, so it never collides with authored
         // captions living inside it.
-        (<AsrSubtitles
+        <AsrSubtitles
           words={pkg.asr.words}
           direction={pkg.direction}
           bottomPct={pkg.safeArea.bottomPct + 2}
           fontScale={fontScale}
-        />)
+        />
       ) : null}
       {captions.map((caption, i) => (
         <React.Fragment key={i}>
@@ -222,9 +272,16 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
       />
       {/* Render after Hook: the narrow beam and compact impact must remain
           visible over the solid HookBg. Its restrained size keeps text clear. */}
-      <HookEnergyBridge window={hookWindow} theme={resolvedHookBgTheme} reduced={reduced} />
+      <HookEnergyBridge
+        window={hookWindow}
+        theme={resolvedHookBgTheme}
+        reduced={reduced}
+      />
       <Nameplate
-        data={{ channel: authored.channel, episodeTitle: authored.episodeTitle }}
+        data={{
+          channel: authored.channel,
+          episodeTitle: authored.episodeTitle,
+        }}
         window={nameplateWindow}
         position={nameplatePosition}
         direction={pkg.direction}
