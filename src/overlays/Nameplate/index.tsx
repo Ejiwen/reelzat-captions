@@ -14,6 +14,8 @@ export type NameplateProps = OverlayBaseProps & {
   };
 };
 
+const nameplateSeparatorColor = "#E8D61A";
+
 // Channel identity chip: channel name + episode title in a quiet corner of
 // the safe area. Enters (slideEdge) after the hook exits, then stays put.
 export const Nameplate: React.FC<NameplateProps> = ({
@@ -29,8 +31,10 @@ export const Nameplate: React.FC<NameplateProps> = ({
 }) => {
   const { width, height } = useVideoConfig();
 
-  const channelSize = width * overlayType.nameplateChannelSizeFactor * fontScale;
-  const episodeSize = width * overlayType.nameplateEpisodeSizeFactor * fontScale;
+  const channelSize =
+    width * overlayType.nameplateChannelSizeFactor * fontScale;
+  const episodeSize =
+    width * overlayType.nameplateEpisodeSizeFactor * fontScale;
   const resolvedSidePct = safeArea?.sidePct ?? 7;
   const safeTop = facebookSafeRegionTopPx(width, height, 4 / 5);
   const safeRegionHeight = height - safeTop * 2;
@@ -102,8 +106,8 @@ export const Nameplate: React.FC<NameplateProps> = ({
                 height: channelSize * 0.54,
                 flexShrink: 0,
                 borderRadius: "50%",
-                background: palette.gold,
-                boxShadow: `0 0 ${channelSize * 0.2}px color-mix(in oklch, ${palette.gold} 55%, transparent)`,
+                background: nameplateSeparatorColor,
+                boxShadow: `0 0 ${channelSize * 0.2}px color-mix(in oklch, ${nameplateSeparatorColor} 55%, transparent)`,
               }}
             />
             <div
