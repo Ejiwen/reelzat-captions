@@ -14,11 +14,12 @@
     "prerender:batch": "npm run discover",
     "render:batch": "tsx scripts/render-batch.ts",
     "preview": "remotion render Captioned out/preview.mp4 --frames=0-150",
-    "test": "node --import tsx --test tests/ingest.test.ts tests/hookbg-theme.test.ts tests/energy-bridge.test.ts",
+    "test": "node --import tsx --test tests/ingest.test.ts tests/hookbg-theme.test.ts tests/energy-bridge.test.ts tests/video-intro.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.498",
+    "@remotion/effects": "4.0.498",
     "@remotion/layout-utils": "^4.0.498",
     "@remotion/media-parser": "^4.0.498",
     "@remotion/motion-blur": "^4.0.498",

@@ -1,14 +1,5 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  Easing,
-  OffthreadVideo,
-  Sequence,
-  interpolate,
-  staticFile,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { AbsoluteFill, Sequence, useVideoConfig } from "remotion";
 import { useReelPackage } from "../ingest/useReelPackage";
 import type { ReelPackage, ResolvedAuthoredCaption } from "../ingest/resolve";
 import {
@@ -32,6 +23,7 @@ import { HookEnergyBridge } from "../overlays/HookEnergyBridge";
 import type { AuthoredReelProps } from "../schema/reelProps";
 import { AsrSubtitles } from "./AsrSubtitles";
 import { CaptionScrim } from "./CaptionScrim";
+import { SourceVideoLayer } from "./SourceVideoLayer";
 
 // The publish-ready composition: clean 9:16 clip + hook + authored captions
 // + channel nameplate, choreographed:
@@ -44,6 +36,17 @@ import { CaptionScrim } from "./CaptionScrim";
 // Captioned composition).
 export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
   const pkg = useReelPackage(props.packageDir, props.clipId);
+  const sourceTheme = pkg?.authored
+    ? resolveHookBgTheme({
+        explicit:
+          props.hookBgTheme ??
+          hookConfig.background.themeOverride ??
+          pkg.authored.hook.backgroundTheme ??
+          undefined,
+        text: pkg.authored.hook.text,
+        fallback: hookConfig.background.defaultTheme,
+      })
+    : hookConfig.background.defaultTheme;
 
   return (
     <AbsoluteFill
@@ -56,39 +59,15 @@ export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
         // premountFor keeps the video mounted-and-buffered ahead of time so
         // batch renders never stall waiting for the first frames.
         (<Sequence durationInFrames={pkg.media.durationInFrames} premountFor={60}>
-          <FadingSourceVideo
+          <SourceVideoLayer
             src={pkg.media.videoSrc}
             durationInFrames={pkg.media.durationInFrames}
+            reduced={props.reduced}
+            theme={sourceTheme}
           />
         </Sequence>)
       ) : null}
       {pkg ? <OverlayStack pkg={pkg} {...props} /> : null}
-    </AbsoluteFill>
-  );
-};
-
-const FadingSourceVideo: React.FC<{ src: string; durationInFrames: number }> = ({
-  src,
-  durationInFrames,
-}) => {
-  const frame = useCurrentFrame();
-  const fade = interpolate(
-    frame,
-    [
-      Math.max(0, durationInFrames - outroConfig.transitionFadeFrames),
-      Math.max(1, durationInFrames - 1),
-    ],
-    [1, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.inOut(Easing.cubic),
-    },
-  );
-
-  return (
-    <AbsoluteFill style={{ opacity: fade }}>
-      <OffthreadVideo src={staticFile(src)} pauseWhenBuffering volume={fade} />
     </AbsoluteFill>
   );
 };

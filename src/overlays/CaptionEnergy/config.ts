@@ -21,6 +21,11 @@ export type CaptionEnergyConfig = {
   surfacePaddingBlockPx: number;
   oneLineRadiusPx: number;
   twoLineRadiusPx: number;
+  edgeAccentInsetPx: number;
+  edgeAccentWidthPx: number;
+  edgeAccentOpacity: number;
+  sheenOpacity: number;
+  sheenWidthPct: number;
   exitFrames: number;
   launchScaleFrom: number;
   launchOpacityFrom: number;
@@ -44,12 +49,17 @@ export const captionEnergyConfig: CaptionEnergyConfig = {
   sourcePulseOpacity: 0.48,
   impactRadiusPx: 105,
   impactOpacity: 0.58,
-  surfaceOpacity: 0.88,
-  surfaceBlurPx: 18,
-  surfacePaddingInlinePx: 34,
-  surfacePaddingBlockPx: 10,
-  oneLineRadiusPx: 999,
-  twoLineRadiusPx: 34,
+  surfaceOpacity: 0.94,
+  surfaceBlurPx: 24,
+  surfacePaddingInlinePx: 42,
+  surfacePaddingBlockPx: 15,
+  oneLineRadiusPx: 34,
+  twoLineRadiusPx: 30,
+  edgeAccentInsetPx: 17,
+  edgeAccentWidthPx: 5,
+  edgeAccentOpacity: 0.86,
+  sheenOpacity: 0.3,
+  sheenWidthPct: 22,
   exitFrames: 8,
   launchScaleFrom: 0.16,
   launchOpacityFrom: 0.2,

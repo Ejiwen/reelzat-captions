@@ -91,23 +91,33 @@ export const Outro: React.FC<OutroProps> = ({
     extrapolateRight: "clamp",
     easing: Easing.inOut(Easing.cubic),
   });
-  const logoTarget = { x: width / 2, y: height * 0.35 };
-  const logoX = logoTarget.x;
-  const logoY = height * 0.43 + (logoTarget.y - height * 0.43) * logoTravel;
-  const logoScale = config.logoStartScale + (1 - config.logoStartScale) * logoTravel;
   const logoSize = config.logoSizePx * px;
+  const sloganLineHeight = 1.6;
+  const websiteLineHeight = 1.3;
+  const sloganHeight = config.sloganFontSizePx * px * sloganLineHeight;
+  const websiteHeight = config.websiteFontSizePx * px * websiteLineHeight;
+  const logoSloganGap = config.logoSloganGapPx * px;
+  const sloganWebsiteGap = config.sloganWebsiteGapPx * px;
+  const contentHeight =
+    logoSize + logoSloganGap + sloganHeight + sloganWebsiteGap + websiteHeight;
+  const contentTop = (height - contentHeight) / 2;
+  const logoTarget = { x: width / 2, y: contentTop + logoSize / 2 };
+  const logoX = logoTarget.x;
+  const logoStartY = logoTarget.y + height * 0.08;
+  const logoY = logoStartY + (logoTarget.y - logoStartY) * logoTravel;
+  const logoScale = config.logoStartScale + (1 - config.logoStartScale) * logoTravel;
   const lightDrift = Math.sin(frame * 0.022);
   const counterDrift = Math.cos(frame * 0.018);
 
-  const ctaStyle = revealStyle({
-    frame,
-    start: atFps(config.ctaStartFrame, fps),
-    duration: atFps(config.textRevealFrames, fps),
-    reduced,
-  });
   const sloganStyle = revealStyle({
     frame,
     start: atFps(config.sloganStartFrame, fps),
+    duration: atFps(config.textRevealFrames, fps),
+    reduced,
+  });
+  const websiteStyle = revealStyle({
+    frame,
+    start: atFps(config.websiteStartFrame, fps),
     duration: atFps(config.textRevealFrames, fps),
     reduced,
   });
@@ -254,7 +264,7 @@ export const Outro: React.FC<OutroProps> = ({
         style={{
           position: "absolute",
           insetInline: `${(100 - config.contentWidthPct) / 2}%`,
-          top: "55%",
+          top: contentTop + logoSize + logoSloganGap,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -264,37 +274,9 @@ export const Outro: React.FC<OutroProps> = ({
       >
         <div
           style={{
-            fontSize: config.ctaFontSizePx * px,
-            fontWeight: fontWeights.bold,
-            lineHeight: 1.55,
-            color: palette.ink,
-            textShadow: `0 ${3 * px}px ${18 * px}px ${themePalette.vignette}`,
-            ...ctaStyle,
-          }}
-        >
-          استمع للحلقة كاملة
-          <br />
-          على تطبيق وازن شنقيط
-        </div>
-
-        <div
-          aria-hidden
-          style={{
-            width: 110 * px,
-            height: Math.max(2, 3 * px),
-            marginBlock: `${24 * px}px ${28 * px}px`,
-            borderRadius: 999,
-            background: `linear-gradient(90deg, transparent, ${themePalette.highlight}, transparent)`,
-            boxShadow: `0 0 ${16 * px}px color-mix(in oklch, ${themePalette.highlight} 48%, transparent)`,
-            ...ctaStyle,
-          }}
-        />
-
-        <div
-          style={{
             fontSize: config.sloganFontSizePx * px,
             fontWeight: fontWeights.regular,
-            lineHeight: 1.6,
+            lineHeight: sloganLineHeight,
             color: `color-mix(in oklch, ${palette.ink} 86%, ${themePalette.highlight})`,
             letterSpacing: "0.01em",
             textShadow: `0 ${2 * px}px ${14 * px}px ${themePalette.vignette}`,
@@ -302,6 +284,22 @@ export const Outro: React.FC<OutroProps> = ({
           }}
         >
           لأن شنقيط لم تُروَ كاملة …
+        </div>
+
+        <div
+          dir="ltr"
+          style={{
+            marginTop: sloganWebsiteGap,
+            fontSize: config.websiteFontSizePx * px,
+            fontWeight: fontWeights.medium,
+            lineHeight: websiteLineHeight,
+            color: `color-mix(in oklch, ${palette.ink} 68%, ${themePalette.highlight})`,
+            letterSpacing: "0.09em",
+            textShadow: `0 0 ${12 * px}px color-mix(in oklch, ${themePalette.highlight} 20%, transparent)`,
+            ...websiteStyle,
+          }}
+        >
+          www.wazin.app
         </div>
       </div>
     </AbsoluteFill>

@@ -1,23 +1,17 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  Easing,
-  OffthreadVideo,
-  Sequence,
-  interpolate,
-  staticFile,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { AbsoluteFill, Sequence, useVideoConfig } from "remotion";
 import { CaptionPage } from "../captions/CaptionPage";
 import { useActiveSegment } from "../captions/useActiveSegment";
 import { palette, scrim } from "../design/tokens";
 import { useReelPackage } from "../ingest/useReelPackage";
 import type { ReelPackage } from "../ingest/resolve";
 import { Outro, ProgressBar, SafeAreaGuides, outroConfig } from "../overlays";
+import { hookConfig } from "../overlays/Hook/config";
+import { resolveHookBgTheme } from "../overlays/HookBg/themes";
 import type { AsrCaptionedProps } from "../schema/reelProps";
 import type { ResolvedCaptions } from "../schema/captions";
 import { themes } from "../themes";
+import { SourceVideoLayer } from "./SourceVideoLayer";
 
 // Today's Captioned behaviour, fed from a package folder: ASR cues (sidecar
 // captions[] or the package's captions.json) rendered through the existing
@@ -26,6 +20,13 @@ import { themes } from "../themes";
 export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
   const pkg = useReelPackage(props.packageDir, props.clipId);
   const { durationInFrames } = useVideoConfig();
+  const sourceTheme = pkg
+    ? resolveHookBgTheme({
+        explicit: hookConfig.background.themeOverride ?? undefined,
+        text: pkg.title ?? undefined,
+        fallback: hookConfig.background.defaultTheme,
+      })
+    : hookConfig.background.defaultTheme;
 
   return (
     <AbsoluteFill
@@ -36,9 +37,11 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
     >
       {pkg && props.mode === "burn" ? (
         <Sequence durationInFrames={pkg.media.durationInFrames} premountFor={60}>
-          <FadingSourceVideo
+          <SourceVideoLayer
             src={pkg.media.videoSrc}
             durationInFrames={pkg.media.durationInFrames}
+            reduced={props.reduced}
+            theme={sourceTheme}
           />
         </Sequence>
       ) : null}
@@ -68,32 +71,6 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
           />
         </Sequence>
       ) : null}
-    </AbsoluteFill>
-  );
-};
-
-const FadingSourceVideo: React.FC<{ src: string; durationInFrames: number }> = ({
-  src,
-  durationInFrames,
-}) => {
-  const frame = useCurrentFrame();
-  const fade = interpolate(
-    frame,
-    [
-      Math.max(0, durationInFrames - outroConfig.transitionFadeFrames),
-      Math.max(1, durationInFrames - 1),
-    ],
-    [1, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.inOut(Easing.cubic),
-    },
-  );
-
-  return (
-    <AbsoluteFill style={{ opacity: fade }}>
-      <OffthreadVideo src={staticFile(src)} pauseWhenBuffering volume={fade} />
     </AbsoluteFill>
   );
 };

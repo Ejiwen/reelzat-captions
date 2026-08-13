@@ -279,11 +279,35 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
   const radius = lineCount === 1 ? config.oneLineRadiusPx : config.twoLineRadiusPx;
   const revealRadius = 18 + reveal * 142;
   const mask = `radial-gradient(circle at 50% 100%, black 0%, black ${Math.max(0, revealRadius - 18)}%, transparent ${revealRadius}%)`;
+  const accentReveal = interpolate(
+    local,
+    [revealStart + atFps(2, fps), revealEnd + atFps(3, fps)],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  const sheen = interpolate(
+    local,
+    [revealStart + atFps(1, fps), revealEnd + atFps(10, fps)],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const sheenOpacity =
+    Math.sin(sheen * Math.PI) * config.sheenOpacity * reveal * (1 - exit);
+  const surfacePaddingBlock =
+    config.surfacePaddingBlockPx * px * (lineCount === 1 ? 1 : 1.12);
 
   return (
     <div style={{
       position: "relative",
-      padding: `${config.surfacePaddingBlockPx * px}px ${config.surfacePaddingInlinePx * px}px`,
+      padding: `${surfacePaddingBlock}px ${config.surfacePaddingInlinePx * px}px`,
       isolation: "isolate",
       transformOrigin: "center bottom",
       transform: `translate(${translateX.toFixed(2)}px, ${translateY.toFixed(2)}px) scale(${scale.toFixed(4)})`,
@@ -292,22 +316,82 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
     }}>
       <div aria-hidden style={{
         position: "absolute",
+        inset: `${-10 * px}px ${-16 * px}px`,
+        zIndex: -3,
+        borderRadius: (radius + 14) * px,
+        opacity: reveal * (1 - exit) * 0.3,
+        background: `radial-gradient(ellipse 38% 76% at 92% 48%, color-mix(in oklch, ${themePalette.highlight} 34%, transparent), transparent 76%)`,
+        filter: `blur(${22 * px}px)`,
+        mixBlendMode: "screen",
+      }} />
+      <div aria-hidden style={{
+        position: "absolute",
         inset: 0,
         zIndex: -1,
         borderRadius: radius * px,
+        overflow: "hidden",
         opacity: config.surfaceOpacity * reveal * (1 - exit),
         background: `
-          radial-gradient(ellipse 72% 110% at 50% 100%, color-mix(in oklch, ${themePalette.highlight} 24%, transparent) 0%, transparent 66%),
-          radial-gradient(ellipse 62% 90% at 16% 18%, color-mix(in oklch, ${themePalette.secondary} 48%, transparent) 0%, transparent 72%),
-          linear-gradient(135deg, ${themePalette.vignette} 0%, color-mix(in oklch, ${themePalette.base} 92%, black) 48%, color-mix(in oklch, ${themePalette.primary} 54%, ${themePalette.base}) 100%)`,
-        border: `${Math.max(1, px)}px solid color-mix(in oklch, ${themePalette.highlight} 28%, transparent)`,
-        boxShadow: `0 ${8 * px}px ${32 * px}px rgba(0,0,0,0.58), inset 0 1px 0 color-mix(in oklch, ${themePalette.highlight} 20%, transparent), 0 0 ${22 * px}px color-mix(in oklch, ${themePalette.primary} 18%, transparent)`,
-        WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.72) brightness(0.72)`,
-        backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.72) brightness(0.72)`,
+          linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.025) 49.5%, transparent 50.5%),
+          radial-gradient(ellipse 44% 150% at 100% 48%, color-mix(in oklch, ${themePalette.primary} 34%, transparent) 0%, transparent 70%),
+          radial-gradient(ellipse 78% 150% at 5% -12%, color-mix(in oklch, ${themePalette.secondary} 18%, transparent) 0%, transparent 66%),
+          linear-gradient(112deg, rgba(4,7,14,0.94) 0%, color-mix(in oklch, ${themePalette.vignette} 92%, #080b12) 58%, color-mix(in oklch, ${themePalette.base} 78%, #0a0c13) 100%)`,
+        border: `${Math.max(1, px)}px solid color-mix(in oklch, ${themePalette.highlight} 26%, rgba(255,255,255,0.12))`,
+        boxShadow: `0 ${14 * px}px ${42 * px}px rgba(0,0,0,0.56), 0 ${3 * px}px ${8 * px}px rgba(0,0,0,0.3), inset 0 ${1 * px}px 0 rgba(255,255,255,0.13), inset 0 ${-1 * px}px 0 rgba(0,0,0,0.48), 0 0 ${22 * px}px color-mix(in oklch, ${themePalette.primary} 12%, transparent)`,
+        WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
+        backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
         WebkitMaskImage: mask,
         maskImage: mask,
+      }}>
+        <div style={{
+          position: "absolute",
+          insetInline: 20 * px,
+          top: 0,
+          height: Math.max(1, 1.25 * px),
+          opacity: 0.62,
+          background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.28) 34%, color-mix(in oklch, ${themePalette.highlight} 42%, white) 74%, transparent)`,
+          filter: `blur(${0.35 * px}px)`,
+        }} />
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          opacity: 0.055,
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.22) ${Math.max(0.5, 0.7 * px)}px, transparent ${Math.max(0.5, 0.7 * px)}px)`,
+          backgroundSize: `100% ${6 * px}px`,
+          mixBlendMode: "soft-light",
+        }} />
+        <div style={{
+          position: "absolute",
+          top: "-22%",
+          bottom: "-22%",
+          left: `${100 - sheen * (100 + config.sheenWidthPct)}%`,
+          width: `${config.sheenWidthPct}%`,
+          opacity: sheenOpacity,
+          transform: "skewX(-14deg)",
+          background: `linear-gradient(90deg, transparent, color-mix(in oklch, ${themePalette.highlight} 72%, white), transparent)`,
+          filter: `blur(${7 * px}px)`,
+          mixBlendMode: "screen",
+        }} />
+      </div>
+
+      <div aria-hidden style={{
+        position: "absolute",
+        zIndex: 2,
+        insetInlineStart: config.edgeAccentInsetPx * px,
+        top: lineCount === 1 ? "31%" : "25%",
+        width: config.edgeAccentWidthPx * px,
+        height: lineCount === 1 ? "38%" : "50%",
+        borderRadius: 999,
+        opacity: accentReveal * config.edgeAccentOpacity * (1 - exit),
+        transform: `scaleY(${accentReveal.toFixed(4)})`,
+        transformOrigin: "center",
+        background: `linear-gradient(180deg, ${themePalette.highlight}, ${themePalette.primary})`,
+        boxShadow: `0 0 ${10 * px}px color-mix(in oklch, ${themePalette.highlight} 62%, transparent)`,
       }} />
-      {children}
+
+      <div style={{ position: "relative", zIndex: 1 }}>
+        {children}
+      </div>
     </div>
   );
 };
