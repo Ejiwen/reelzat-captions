@@ -24,6 +24,8 @@ import {
 } from "./overlays/HookEnergyBridge/demo";
 import { NameplateDemo } from "./overlays/Nameplate/demo";
 import { ProgressBarDemo } from "./overlays/ProgressBar/demo";
+import { OutroDemo } from "./overlays/Outro/demo";
+import { outroConfig } from "./overlays/Outro/config";
 import { SafeAreaDemo } from "./overlays/SafeArea/demo";
 import {
   asrCaptionedProps,
@@ -78,7 +80,10 @@ export const RemotionRoot: React.FC = () => {
                 clipId: reel.id,
                 ...defaultAuthoredReelProps,
               }}
-              durationInFrames={reel.durationInFrames}
+              durationInFrames={
+                reel.durationInFrames +
+                (outroConfig.enabled ? Math.round(outroConfig.durationSeconds * reel.fps) : 0)
+              }
               width={reel.width}
               height={reel.height}
               fps={reel.fps}
@@ -120,6 +125,7 @@ export const RemotionRoot: React.FC = () => {
         <Composition id="CaptionLong-Demo" component={CaptionLongDemo} {...DEMO} />
         <Composition id="Nameplate-Demo" component={NameplateDemo} {...DEMO} />
         <Composition id="ProgressBar-Demo" component={ProgressBarDemo} {...DEMO} />
+        <Composition id="Outro-Demo" component={OutroDemo} {...DEMO} />
         <Composition id="SafeArea-Demo" component={SafeAreaDemo} {...DEMO} />
       </Folder>
 

@@ -8,12 +8,14 @@ import {
   CaptionShort,
   Hook,
   Nameplate,
+  Outro,
   ProgressBar,
   SafeAreaGuides,
   WindowTimeline,
   type OverlayPosition,
   type OverlayTextZone,
   type TimelineItem,
+  outroConfig,
 } from "../overlays";
 import { hookConfig } from "../overlays/Hook/config";
 import { resolveHookBgTheme } from "../overlays/HookBg/themes";
@@ -39,7 +41,7 @@ export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
       {pkg && props.mode === "burn" ? (
         // premountFor keeps the video mounted-and-buffered ahead of time so
         // batch renders never stall waiting for the first frames.
-        (<Sequence premountFor={60}>
+        (<Sequence durationInFrames={pkg.media.durationInFrames} premountFor={60}>
           <OffthreadVideo src={staticFile(pkg.media.videoSrc)} pauseWhenBuffering />
         </Sequence>)
       ) : null}
@@ -66,6 +68,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   debug,
 }) => {
   const { fps, durationInFrames } = useVideoConfig();
+  const videoDurationInFrames = Math.min(pkg.media.durationInFrames, durationInFrames);
   const authored = pkg.authored;
 
   if (!authored) {
@@ -83,14 +86,14 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   // not compete for reading attention, and never exceed the clip duration.
   const nextCaptionStart = captions.reduce(
     (earliest, caption) => Math.min(earliest, caption.window.startFrame),
-    durationInFrames,
+    videoDurationInFrames,
   );
   const hookWindow = {
     ...hook.window,
     endFrame: Math.max(
       hook.window.endFrame,
       Math.min(
-        durationInFrames,
+        videoDurationInFrames,
         nextCaptionStart,
         hook.window.endFrame + Math.round(hookConfig.extraHoldSeconds * fps),
       ),
@@ -101,9 +104,18 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   // so it can identify the reel from the opening frame through the outro.
   const nameplateWindow = {
     startFrame: 0,
-    endFrame: durationInFrames,
+    endFrame: videoDurationInFrames,
   };
   const nameplatePosition: OverlayPosition = "top";
+
+  // The composition is longer than the source by exactly the outro duration.
+  // The video Sequence ends first, guaranteeing that neither its image nor
+  // its audio continues underneath the brand card.
+  const outroDurationInFrames = Math.max(1, durationInFrames - videoDurationInFrames);
+  const outroWindow = {
+    startFrame: videoDurationInFrames,
+    endFrame: durationInFrames,
+  };
 
   // Resolve the HookBg theme ONCE — the energy bridge and the Hook (which
   // renders HookBg) must always agree. Priority: Studio prop → project-wide
@@ -128,6 +140,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
       position: c.position,
     })),
     { label: "nameplate", window: nameplateWindow, position: nameplatePosition },
+    { label: "outro", window: outroWindow, position: "bottom" },
   ];
 
   return (
@@ -194,6 +207,19 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         fontScale={fontScale}
         reduced={reduced}
       />
+      {outroConfig.enabled ? (
+        <Sequence
+          from={outroWindow.startFrame}
+          durationInFrames={outroDurationInFrames}
+          premountFor={Math.min(30, outroWindow.startFrame)}
+        >
+          <Outro
+            theme={resolvedHookBgTheme}
+            durationInFrames={outroDurationInFrames}
+            reduced={reduced}
+          />
+        </Sequence>
+      ) : null}
       {debug ? (
         <>
           <SafeAreaGuides
