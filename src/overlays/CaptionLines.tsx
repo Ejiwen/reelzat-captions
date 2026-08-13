@@ -14,6 +14,7 @@ type CaptionLinesProps = {
   fontSize: number;
   direction: "rtl" | "ltr";
   windowStartFrame: number;
+  entranceDelayFrames?: number;
   stagger: boolean;
   reduced?: boolean;
   wrap?: boolean;
@@ -24,6 +25,7 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
   fontSize,
   direction,
   windowStartFrame,
+  entranceDelayFrames = 0,
   stagger,
   reduced,
   wrap = false,
@@ -64,7 +66,13 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
           {line.map((word, wordIndex) => {
             flatIndex += 1;
             const style = stagger
-              ? staggeredWordStyle({ frame, fps, index: flatIndex, windowStartFrame, reduced })
+              ? staggeredWordStyle({
+                  frame,
+                  fps,
+                  index: flatIndex,
+                  windowStartFrame: windowStartFrame + entranceDelayFrames,
+                  reduced,
+                })
               : {};
             return <Word key={wordIndex} text={word} style={style} />;
           })}

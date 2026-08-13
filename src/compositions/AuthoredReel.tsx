@@ -4,6 +4,7 @@ import { useReelPackage } from "../ingest/useReelPackage";
 import type { ReelPackage, ResolvedAuthoredCaption } from "../ingest/resolve";
 import {
   CaptionLong,
+  CaptionEnergyBridge,
   CaptionShort,
   Hook,
   Nameplate,
@@ -131,7 +132,11 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
 
   return (
     <AbsoluteFill>
-      <ProgressBar direction={pkg.direction} reduced={reduced} />
+      <ProgressBar
+        direction={pkg.direction}
+        reduced={reduced}
+        interactionWindows={captions.map((caption) => caption.window)}
+      />
       {mode === "burn" ? (
         <CaptionScrim windows={bottomCaptionWindows} bottomPct={pkg.safeArea.bottomPct} />
       ) : null}
@@ -146,14 +151,22 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         />)
       ) : null}
       {captions.map((caption, i) => (
-        <AuthoredCaption
-          key={i}
-          caption={caption}
-          pkg={pkg}
-          fontScale={fontScale}
-          animation={captionAnimation}
-          reduced={reduced}
-        />
+        <React.Fragment key={i}>
+          <CaptionEnergyBridge
+            window={caption.window}
+            position={caption.position}
+            textZone={zoneFor(pkg, caption.position)}
+            lineCount={caption.type === "short_1line" ? 1 : 2}
+            reduced={reduced}
+          />
+          <AuthoredCaption
+            caption={caption}
+            pkg={pkg}
+            fontScale={fontScale}
+            animation={captionAnimation}
+            reduced={reduced}
+          />
+        </React.Fragment>
       ))}
       <Hook
         data={{ text: hook.text, backgroundTheme: resolvedHookBgTheme }}

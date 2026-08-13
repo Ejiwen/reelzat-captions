@@ -5,6 +5,7 @@ import { fontFamily, reelTypography } from "../../design/fonts";
 import { overlayType, spacing, typeScale } from "../../design/tokens";
 import { tokenizeLine } from "../../schema/captions";
 import { CaptionLines } from "../CaptionLines";
+import { CaptionEnergySurface, captionEnergyConfig } from "../CaptionEnergy";
 import { OverlayRoot } from "../OverlayRoot";
 import type { OverlayBaseProps } from "../types";
 import { progressBarConfig } from "../ProgressBar/config";
@@ -76,14 +77,23 @@ export const CaptionShort: React.FC<CaptionShortProps> = ({
       reduced={reduced}
       trailOnEntry={stagger}
     >
-      <CaptionLines
-        lines={lines}
-        fontSize={fontSize}
-        direction={direction}
-        windowStartFrame={window.startFrame}
-        stagger={stagger}
+      <CaptionEnergySurface
+        window={window}
+        lineCount={1}
+        position={position}
+        textZone={textZone}
         reduced={reduced}
-      />
+      >
+        <CaptionLines
+          lines={lines}
+          fontSize={fontSize}
+          direction={direction}
+          windowStartFrame={window.startFrame}
+          entranceDelayFrames={reduced ? 0 : captionEnergyConfig.textDelayFrames}
+          stagger={stagger}
+          reduced={reduced}
+        />
+      </CaptionEnergySurface>
     </OverlayRoot>
   );
 };

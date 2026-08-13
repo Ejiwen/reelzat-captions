@@ -27,6 +27,14 @@ export {
 } from "./HookEnergyBridge";
 export { CaptionShort, type CaptionShortProps } from "./CaptionShort";
 export { CaptionLong, type CaptionLongProps } from "./CaptionLong";
+export {
+  CaptionEnergyBridge,
+  CaptionEnergySurface,
+  captionEnergyConfig,
+  type CaptionEnergyBridgeProps,
+  type CaptionEnergyConfig,
+  type CaptionEnergySurfaceProps,
+} from "./CaptionEnergy";
 export { Nameplate, type NameplateProps } from "./Nameplate";
 export {
   ProgressBar,

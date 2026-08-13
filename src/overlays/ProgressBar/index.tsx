@@ -12,17 +12,23 @@ import {
 import { progressBarVisibilityStyle } from "./animations";
 import { progressBarConfig, type ProgressBarConfig } from "./config";
 import { getProgressBarGeometry, normalizedReelProgress } from "./math";
+import type { OverlayWindow } from "../types";
+import { captionEnergyConfig } from "../CaptionEnergy/config";
 
 export type ProgressBarProps = {
   direction?: "rtl" | "ltr";
   reduced?: boolean;
   config?: Partial<ProgressBarConfig>;
+  // Caption windows make the circle physically react when it emits and
+  // reabsorbs a caption. Optional, so the component remains reusable.
+  interactionWindows?: OverlayWindow[];
 };
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   direction = "rtl",
   reduced,
   config: overrides,
+  interactionWindows = [],
 }) => {
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
@@ -78,6 +84,29 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     config,
     reduced,
   });
+  const pulseFrames = Math.max(
+    2,
+    Math.round((captionEnergyConfig.circlePulseFrames / 30) * fps),
+  );
+  const pulse = reduced
+    ? 0
+    : interactionWindows.reduce((strongest, window) => {
+        const entry = interpolate(
+          frame,
+          [window.startFrame, window.startFrame + pulseFrames * 0.38, window.startFrame + pulseFrames],
+          [0, 1, 0],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+        );
+        const exitStart = window.endFrame - pulseFrames;
+        const exit = interpolate(
+          frame,
+          [exitStart, exitStart + pulseFrames * 0.62, window.endFrame],
+          [0, 1, 0],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+        );
+        return Math.max(strongest, entry, exit);
+      }, 0);
+  const reactionScale = 1 + pulse * (captionEnergyConfig.circlePulseScale - 1);
 
   return (
     <div
@@ -94,6 +123,14 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         ...visibility,
       }}
     >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          transform: `scale(${reactionScale.toFixed(4)})`,
+          transformOrigin: "center",
+        }}
+      >
       <div
         style={{
           position: "absolute",
@@ -179,6 +216,21 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           }}
         />
       </svg>
+      </div>
+      {pulse > 0.002 ? (
+        <div
+          style={{
+            position: "absolute",
+            inset: -18 * scale,
+            borderRadius: "50%",
+            border: `${Math.max(2, 4 * scale)}px solid color-mix(in oklch, ${config.indicatorColor} 82%, ${config.fillColorEnd})`,
+            boxShadow: `0 0 ${30 * scale}px ${10 * scale}px color-mix(in oklch, ${config.indicatorColor} 62%, transparent)`,
+            opacity: pulse * captionEnergyConfig.circlePulseGlowOpacity,
+            transform: `scale(${(0.9 + pulse * 0.22).toFixed(4)})`,
+            mixBlendMode: "screen",
+          }}
+        />
+      ) : null}
     </div>
   );
 };
