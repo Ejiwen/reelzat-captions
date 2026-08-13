@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { motionSpecSchema } from "../motion";
+import { HOOK_BG_THEMES } from "../overlays/HookBg/themes";
 
 // Studio props for the per-reel compositions. Identity (packageDir/clipId)
 // comes from the generated manifest; everything else is a live control.
@@ -15,6 +16,9 @@ export const authoredReelProps = z.object({
   // Override the per-overlay animation defaults from Studio.
   hookAnimation: motionSpecSchema.nullable(),
   captionAnimation: motionSpecSchema.nullable(),
+  // Studio override for the HookBg editorial theme. null → the package's
+  // hook.backgroundTheme, then keyword fallback, then the configured default.
+  hookBgTheme: z.enum(HOOK_BG_THEMES).nullable(),
   reduced: z.boolean(),
   debug: z.boolean(),
 });
@@ -26,6 +30,7 @@ export const defaultAuthoredReelProps: Omit<AuthoredReelProps, "packageDir" | "c
   fontScale: 1,
   hookAnimation: null,
   captionAnimation: null,
+  hookBgTheme: null,
   reduced: false,
   debug: false,
 };

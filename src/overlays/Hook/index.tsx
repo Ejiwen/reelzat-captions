@@ -12,6 +12,7 @@ import {
 } from "../../design/tokens";
 import { tokenizeLine } from "../../schema/captions";
 import { HookBg } from "../HookBg";
+import { resolveHookBgTheme, type HookBgTheme } from "../HookBg/themes";
 import { OverlayRoot } from "../OverlayRoot";
 import { DEFAULT_SAFE_AREA, type OverlayBaseProps, type OverlayTextZone } from "../types";
 import { hookExitProgress, hookWordStyle, shimmerStyle, underlineSweep } from "./animations";
@@ -20,6 +21,10 @@ import { hookConfig } from "./config";
 export type HookProps = OverlayBaseProps & {
   data: {
     text: string;
+    // Editorial background theme for HookBg. Priority: this explicit value →
+    // deterministic keyword fallback on the hook text → the configured
+    // defaultTheme. Unknown values degrade to the fallback chain.
+    backgroundTheme?: HookBgTheme;
   };
 };
 
@@ -82,6 +87,11 @@ export const Hook: React.FC<HookProps> = ({
   const words = useMemo(() => tokenizeLine(data.text), [data.text]);
   const shimmer = shimmerStyle({ frame, fps, window, wordCount: words.length, reduced });
   const exitProgress = hookExitProgress(frame, fps, window, words.length);
+  const backgroundTheme = resolveHookBgTheme({
+    explicit: data.backgroundTheme,
+    text: data.text,
+    fallback: hookConfig.background.defaultTheme,
+  });
 
   return (
     <OverlayRoot
@@ -97,6 +107,7 @@ export const Hook: React.FC<HookProps> = ({
         windowStartFrame={window.startFrame}
         exitProgress={exitProgress}
         settings={hookConfig.background}
+        theme={backgroundTheme}
         reduced={reduced}
       />
       <div

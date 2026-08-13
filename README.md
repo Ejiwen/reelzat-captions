@@ -88,7 +88,8 @@ under **Components/** in Studio so it can be previewed and tuned in isolation.
 
 | Component | Role |
 | --- | --- |
-| `Hook/` | The opening statement — largest type, accent underline sweep, `blurIn` (+ 0.94 springPop scale) entrance, quick `dipExit`. Reads within its first 3 words. |
+| `Hook/` | The opening statement — largest type, gold word cascade in/out, one shimmer pass, accent underline. Reads within its first 3 words. Placement/size/hold live in `Hook/config.ts`. |
+| `HookBg/` | Solid-gradient motion background behind the hook: five editorial themes (`politics`, `religion`, `culture`, `general`, `social`), layered colour fields + one entrance light sweep, exit synced to the hook. Theme via Studio prop, per-reel `hook.backgroundTheme`, or keyword fallback. |
 | `CaptionShort/` | One big authored line, auto-fit, never wrapped. Word-stagger entrance. |
 | `CaptionLong/` | Exactly two balanced lines, one font size for both, flat word-stagger across the break. |
 | `Nameplate/` | Channel + episode title chip in the safe-area corner. Enters as the hook exits; yields (fades out) while a caption shares its band. |

@@ -1,4 +1,5 @@
-import type { HookBgSettings } from "../HookBg";
+import { hookBgPalettes } from "../HookBg/themes";
+import type { HookBgConfig } from "../HookBg";
 
 export type HookConfig = {
   // Hook-only font multiplier. 1 = current size, 1.15 = 15% larger,
@@ -14,7 +15,7 @@ export type HookConfig = {
   // exit animations. The effective window is capped before the next caption
   // and at the end of the video.
   extraHoldSeconds: number;
-  background: HookBgSettings;
+  background: HookBgConfig;
 };
 
 export const hookConfig: HookConfig = {
@@ -24,13 +25,34 @@ export const hookConfig: HookConfig = {
   extraHoldSeconds: 2,
   background: {
     enabled: true,
-    widthPct: 124,
-    heightPct: 108,
+    // ── Set the HookBg theme for the WHOLE project here ──────────────────
+    // Ej1-eji1-Eji1 "politics" | "religion" | "culture" | "general" | "social" | null
+    // null → per-reel: package hook.backgroundTheme → keywords → defaultTheme.
+    themeOverride: "culture",
+    defaultTheme: "general",
+    // Size relative to the Hook layout band — generous so the feathered edge
+    // falls outside the text, never under the outer words.
+    widthPct: 140,
+    heightPct: 122,
+    // Master + per-layer strengths (0..1).
+    opacity: 1,
+    baseOpacity: 0.6,
+    primaryFieldOpacity: 0.66,
+    secondaryFieldOpacity: 0.44,
+    vignetteOpacity: 0.42,
     backdropBlurPx: 0,
-    navyOpacityPct: 44,
-    goldGlowOpacityPct: 8,
-    entryFrames: 18,
-    translateYPx: 12,
-    scaleFrom: 0.96,
+    // Entrance (frames at 30 fps, px at 1080 width).
+    entranceFrames: 18,
+    entranceScaleFrom: 0.96,
+    entranceTranslateYPx: 12,
+    exitScaleTo: 1.03,
+    // Stable-period drift — almost imperceptible by design.
+    driftAmountPx: 26,
+    driftPeriodSeconds: 12,
+    // One-pass entrance light sweep.
+    lightSweepEnabled: true,
+    lightSweepOpacity: 0.16,
+    lightSweepWidthPct: 34,
+    themes: hookBgPalettes,
   },
 };

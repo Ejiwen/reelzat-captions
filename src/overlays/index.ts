@@ -3,7 +3,18 @@
 export * from "./types";
 export { OverlayRoot } from "./OverlayRoot";
 export { Hook, type HookProps } from "./Hook";
-export { HookBg, type HookBgProps, type HookBgSettings } from "./HookBg";
+export {
+  HookBg,
+  HOOK_BG_THEMES,
+  hookBgPalettes,
+  parseHookBgTheme,
+  resolveHookBgTheme,
+  type HookBgConfig,
+  type HookBgPalette,
+  type HookBgProps,
+  type HookBgSettings,
+  type HookBgTheme,
+} from "./HookBg";
 export { CaptionShort, type CaptionShortProps } from "./CaptionShort";
 export { CaptionLong, type CaptionLongProps } from "./CaptionLong";
 export { Nameplate, type NameplateProps } from "./Nameplate";

@@ -1,0 +1,8 @@
+{
+  "themes": ["politics", "religion", "culture", "general", "social"],
+  "sample": {
+    "text": "أربع دول خرجت من دولة واحدة",
+    "backgroundTheme": "general"
+  },
+  "window": { "startFrame": 12, "endFrame": 172 }
+}

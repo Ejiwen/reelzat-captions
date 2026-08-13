@@ -1,4 +1,7 @@
 import type { z } from "zod";
+// Pure module (no React/Remotion) — the canonical HookBg theme list lives
+// with the component; ingest only narrows untrusted strings against it.
+import { parseHookBgTheme, type HookBgTheme } from "../overlays/HookBg/themes";
 import {
   validateCaptions,
   type ResolvedCaptions,
@@ -43,6 +46,9 @@ export type ResolvedHook = {
   text: string;
   position: OverlayPosition;
   window: FrameWindow;
+  // Validated against the canonical theme list; unknown/missing → null and
+  // the composition falls back to keyword matching, then the default theme.
+  backgroundTheme: HookBgTheme | null;
 };
 
 export type ResolvedAuthoredCaption = {
@@ -322,6 +328,7 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
           text: authoring.hook.text,
           position: authoring.hook.position,
           window: toFrameWindow(authoring.hook.display, fps),
+          backgroundTheme: parseHookBgTheme(authoring.hook.backgroundTheme),
         },
         captions: authoring.captions.map((caption) => ({
           type: caption.type,

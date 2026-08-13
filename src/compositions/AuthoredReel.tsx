@@ -58,6 +58,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   fontScale,
   hookAnimation,
   captionAnimation,
+  hookBgTheme,
   reduced,
   debug,
 }) => {
@@ -142,7 +143,17 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         />
       ))}
       <Hook
-        data={{ text: hook.text }}
+        // Background theme priority: Studio prop → project-wide
+        // hookConfig.background.themeOverride → the package's
+        // hook.backgroundTheme → (inside Hook) keyword fallback → default.
+        data={{
+          text: hook.text,
+          backgroundTheme:
+            hookBgTheme ??
+            hookConfig.background.themeOverride ??
+            hook.backgroundTheme ??
+            undefined,
+        }}
         window={hookWindow}
         position={hook.position}
         direction={pkg.direction}

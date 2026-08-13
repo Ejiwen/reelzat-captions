@@ -50,6 +50,11 @@ export const authoredHookSchema = z.object({
   text: z.string().min(1, "hook text must not be empty"),
   position: overlayPositionSchema.default("top"),
   display: displayWindowSchema,
+  // Optional editorial HookBg theme (politics/religion/culture/general/
+  // social). Kept as a plain string here on purpose: an unknown value from a
+  // newer or older emitter must degrade to the default theme downstream,
+  // never fail the package. resolve.ts narrows it against the known list.
+  backgroundTheme: z.string().optional(),
 });
 
 export const authoredCaptionSchema = z.object({

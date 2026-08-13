@@ -8,7 +8,13 @@ import type { ReelsManifest } from "./ingest/manifest";
 import { CaptionLongDemo } from "./overlays/CaptionLong/demo";
 import { CaptionShortDemo } from "./overlays/CaptionShort/demo";
 import { HookDemo } from "./overlays/Hook/demo";
-import { HookBgDemo } from "./overlays/HookBg/demo";
+import {
+  HookBgCultureDemo,
+  HookBgGeneralDemo,
+  HookBgPoliticsDemo,
+  HookBgReligionDemo,
+  HookBgSocialDemo,
+} from "./overlays/HookBg/demo";
 import { NameplateDemo } from "./overlays/Nameplate/demo";
 import { ProgressBarDemo } from "./overlays/ProgressBar/demo";
 import { SafeAreaDemo } from "./overlays/SafeArea/demo";
@@ -92,7 +98,11 @@ export const RemotionRoot: React.FC = () => {
 
       <Folder name="Components">
         <Composition id="Hook-Demo" component={HookDemo} {...DEMO} />
-        <Composition id="HookBg-Demo" component={HookBgDemo} {...DEMO} />
+        <Composition id="HookBg-Politics" component={HookBgPoliticsDemo} {...DEMO} />
+        <Composition id="HookBg-Religion" component={HookBgReligionDemo} {...DEMO} />
+        <Composition id="HookBg-Culture" component={HookBgCultureDemo} {...DEMO} />
+        <Composition id="HookBg-General" component={HookBgGeneralDemo} {...DEMO} />
+        <Composition id="HookBg-Social" component={HookBgSocialDemo} {...DEMO} />
         <Composition id="CaptionShort-Demo" component={CaptionShortDemo} {...DEMO} />
         <Composition id="CaptionLong-Demo" component={CaptionLongDemo} {...DEMO} />
         <Composition id="Nameplate-Demo" component={NameplateDemo} {...DEMO} />
