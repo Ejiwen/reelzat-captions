@@ -17,6 +17,11 @@ import { hookConfig } from "../overlays/Hook/config";
 import { resolveHookBgTheme } from "../overlays/HookBg/themes";
 import type { AsrCaptionedProps } from "../schema/reelProps";
 import type { ResolvedCaptions } from "../schema/captions";
+import {
+  SoundIdentity,
+  soundIdentityConfig,
+  type DuckWindow,
+} from "../sound-identity";
 import { themes } from "../themes";
 import { SourceVideoLayer } from "./SourceVideoLayer";
 
@@ -45,6 +50,20 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
           })) ?? [],
       })
     : null;
+  const duckWindows: DuckWindow[] = midReelCtaWindow
+    ? [
+        {
+          startFrame: midReelCtaWindow.startFrame,
+          endFrame: midReelCtaWindow.startFrame + Math.round(2.1 * fps),
+          gain: soundIdentityConfig.ctaDuckGain,
+        },
+        {
+          startFrame: midReelCtaWindow.endFrame - Math.round(2.2 * fps),
+          endFrame: midReelCtaWindow.endFrame,
+          gain: soundIdentityConfig.ctaDuckGain,
+        },
+      ]
+    : [];
 
   return (
     <AbsoluteFill
@@ -65,6 +84,7 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
             durationInFrames={pkg.media.durationInFrames}
             reduced={props.reduced}
             theme={sourceTheme}
+            duckWindows={duckWindows}
           />
         </Sequence>
       ) : null}
@@ -110,6 +130,14 @@ export const AsrCaptioned: React.FC<AsrCaptionedProps> = (props) => {
             reduced={props.reduced}
           />
         </Sequence>
+      ) : null}
+      {pkg && props.mode === "burn" ? (
+        <SoundIdentity
+          ctaWindow={midReelCtaWindow}
+          outroStartFrame={
+            outroConfig.enabled ? pkg.media.durationInFrames : null
+          }
+        />
       ) : null}
     </AbsoluteFill>
   );

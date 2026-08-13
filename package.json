@@ -5,6 +5,7 @@
   "description": "Burns broadcast-quality Arabic captions over a video file, driven by a local captions.json",
   "scripts": {
     "discover": "tsx scripts/discover-reels.ts",
+    "generate:sfx": "node --import tsx scripts/generate-sound-identity.ts",
     "clean:batch": "tsx scripts/clean-batch.ts",
     "prestudio": "npm run discover",
     "studio": "remotion studio",
@@ -14,7 +15,7 @@
     "prerender:batch": "npm run discover",
     "render:batch": "tsx scripts/render-batch.ts",
     "preview": "remotion render Captioned out/preview.mp4 --frames=0-150",
-    "test": "node --import tsx --test tests/ingest.test.ts tests/hookbg-theme.test.ts tests/energy-bridge.test.ts tests/video-intro.test.ts tests/mid-reel-cta.test.ts",
+    "test": "node --import tsx --test tests/ingest.test.ts tests/hookbg-theme.test.ts tests/energy-bridge.test.ts tests/video-intro.test.ts tests/mid-reel-cta.test.ts tests/sound-identity.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

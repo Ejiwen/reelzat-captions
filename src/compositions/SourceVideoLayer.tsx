@@ -6,9 +6,15 @@ import {
   interpolate,
   staticFile,
   useCurrentFrame,
+  useVideoConfig,
 } from "remotion";
 import { outroConfig } from "../overlays";
 import type { HookBgTheme } from "../overlays/HookBg/themes";
+import {
+  duckGainAtFrame,
+  soundIdentityConfig,
+  type DuckWindow,
+} from "../sound-identity";
 import { VideoIntroReveal } from "../video-intro";
 
 // The one place the source video is rendered in burn mode. Shared by
@@ -21,8 +27,17 @@ export const SourceVideoLayer: React.FC<{
   durationInFrames: number;
   reduced: boolean;
   theme: HookBgTheme;
-}> = ({ src, durationInFrames, reduced, theme }) => {
+  duckWindows?: DuckWindow[];
+}> = ({ src, durationInFrames, reduced, theme, duckWindows = [] }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const sourceGain = duckGainAtFrame({
+    frame,
+    fps,
+    windows: duckWindows,
+    attackSeconds: soundIdentityConfig.duckAttackSeconds,
+    releaseSeconds: soundIdentityConfig.duckReleaseSeconds,
+  });
   const fade = interpolate(
     frame,
     [
@@ -40,7 +55,11 @@ export const SourceVideoLayer: React.FC<{
   return (
     <AbsoluteFill style={{ opacity: fade }}>
       <VideoIntroReveal reduced={reduced} theme={theme}>
-        <OffthreadVideo src={staticFile(src)} pauseWhenBuffering volume={fade} />
+        <OffthreadVideo
+          src={staticFile(src)}
+          pauseWhenBuffering
+          volume={fade * sourceGain}
+        />
       </VideoIntroReveal>
     </AbsoluteFill>
   );

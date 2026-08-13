@@ -23,6 +23,11 @@ import { hookConfig } from "../overlays/Hook/config";
 import { resolveHookBgTheme } from "../overlays/HookBg/themes";
 import { HookEnergyBridge } from "../overlays/HookEnergyBridge";
 import type { AuthoredReelProps } from "../schema/reelProps";
+import {
+  SoundIdentity,
+  soundIdentityConfig,
+  type DuckWindow,
+} from "../sound-identity";
 import { AsrSubtitles } from "./AsrSubtitles";
 import { CaptionScrim } from "./CaptionScrim";
 import { SourceVideoLayer } from "./SourceVideoLayer";
@@ -38,6 +43,7 @@ import { SourceVideoLayer } from "./SourceVideoLayer";
 // Captioned composition).
 export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
   const pkg = useReelPackage(props.packageDir, props.clipId);
+  const { fps, durationInFrames } = useVideoConfig();
   const sourceTheme = pkg?.authored
     ? resolveHookBgTheme({
         explicit:
@@ -49,6 +55,61 @@ export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
         fallback: hookConfig.background.defaultTheme,
       })
     : hookConfig.background.defaultTheme;
+  const duckWindows: DuckWindow[] = [];
+  if (pkg?.authored) {
+    const videoDuration = Math.min(
+      pkg.media.durationInFrames,
+      durationInFrames,
+    );
+    const captions = pkg.authored.captions;
+    const nextCaptionStart = captions.reduce(
+      (earliest, caption) => Math.min(earliest, caption.window.startFrame),
+      videoDuration,
+    );
+    const effectiveHookEnd = Math.max(
+      pkg.authored.hook.window.endFrame,
+      Math.min(
+        videoDuration,
+        nextCaptionStart,
+        pkg.authored.hook.window.endFrame +
+          Math.round(hookConfig.extraHoldSeconds * fps),
+      ),
+    );
+    const ctaWindow = findMidReelCtaWindow({
+      durationInFrames: videoDuration,
+      fps,
+      occupiedWindows: [],
+    });
+    duckWindows.push({
+      startFrame: pkg.authored.hook.window.startFrame,
+      endFrame: Math.min(effectiveHookEnd, Math.round(1.8 * fps)),
+      gain: soundIdentityConfig.hookDuckGain,
+    });
+    captions.forEach((caption) =>
+      duckWindows.push({
+        startFrame: caption.window.startFrame,
+        endFrame: Math.min(
+          caption.window.endFrame,
+          caption.window.startFrame + Math.round(0.9 * fps),
+        ),
+        gain: soundIdentityConfig.captionDuckGain,
+      }),
+    );
+    if (ctaWindow) {
+      duckWindows.push(
+        {
+          startFrame: ctaWindow.startFrame,
+          endFrame: ctaWindow.startFrame + Math.round(2.1 * fps),
+          gain: soundIdentityConfig.ctaDuckGain,
+        },
+        {
+          startFrame: ctaWindow.endFrame - Math.round(2.2 * fps),
+          endFrame: ctaWindow.endFrame,
+          gain: soundIdentityConfig.ctaDuckGain,
+        },
+      );
+    }
+  }
 
   return (
     <AbsoluteFill
@@ -71,6 +132,7 @@ export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
             durationInFrames={pkg.media.durationInFrames}
             reduced={props.reduced}
             theme={sourceTheme}
+            duckWindows={duckWindows}
           />
         </Sequence>
       ) : null}
@@ -301,6 +363,14 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
             reduced={reduced}
           />
         </Sequence>
+      ) : null}
+      {mode === "burn" ? (
+        <SoundIdentity
+          hookWindow={hookWindow}
+          captionWindows={captions.map((caption) => caption.window)}
+          ctaWindow={midReelCtaWindow}
+          outroStartFrame={outroConfig.enabled ? videoDurationInFrames : null}
+        />
       ) : null}
       {debug ? (
         <>
