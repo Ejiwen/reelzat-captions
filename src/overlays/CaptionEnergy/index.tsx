@@ -1,6 +1,5 @@
 import React from "react";
 import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import { palette } from "../../design/tokens";
 import { progressBarConfig } from "../ProgressBar/config";
 import {
   captionBottomOffsetAboveProgressPx,
@@ -8,6 +7,12 @@ import {
 } from "../ProgressBar/math";
 import type { OverlayPosition, OverlayTextZone, OverlayWindow } from "../types";
 import { captionEnergyConfig, type CaptionEnergyConfig } from "./config";
+import {
+  hookBgPalettes,
+  type HookBgPalette,
+  type HookBgTheme,
+} from "../HookBg/themes";
+import { hookConfig } from "../Hook/config";
 
 type Point = { x: number; y: number };
 
@@ -58,6 +63,7 @@ export type CaptionEnergyBridgeProps = {
   lineCount: 1 | 2;
   reduced?: boolean;
   config?: Partial<CaptionEnergyConfig>;
+  theme?: HookBgTheme;
 };
 
 // One short meteor per caption. It disappears as soon as the reading surface
@@ -69,10 +75,13 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
   lineCount,
   reduced,
   config: overrides,
+  theme,
 }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const config = { ...captionEnergyConfig, ...overrides };
+  const themePalette =
+    hookBgPalettes[theme ?? hookConfig.background.themeOverride ?? hookConfig.background.defaultTheme];
   const local = frame - window.startFrame;
   const end = atFps(config.ignitionFrames + config.travelFrames + config.revealFrames, fps);
   const exitFrames = atFps(config.exitFrames, fps);
@@ -139,7 +148,7 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
           d={d}
           pathLength={1}
           fill="none"
-          stroke={palette.sky}
+          stroke={themePalette.primary}
           strokeWidth={config.beamGlowWidthPx * px}
           strokeLinecap="round"
           strokeDasharray={`${travel} ${Math.max(0.001, 1 - travel)}`}
@@ -150,12 +159,12 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
           d={d}
           pathLength={1}
           fill="none"
-          stroke={palette.ink}
+          stroke={themePalette.highlight}
           strokeWidth={config.beamWidthPx * px}
           strokeLinecap="round"
           strokeDasharray={`${travel} ${Math.max(0.001, 1 - travel)}`}
           opacity={beamOpacity}
-          style={{ filter: `drop-shadow(0 0 ${7 * px}px ${palette.cyan})`, mixBlendMode: "screen" }}
+          style={{ filter: `drop-shadow(0 0 ${7 * px}px ${themePalette.highlight})`, mixBlendMode: "screen" }}
         />
       </svg>
 
@@ -168,7 +177,7 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
         transform: "translate(-50%, -50%)",
         borderRadius: "50%",
         opacity: pulse * config.sourcePulseOpacity,
-        background: `radial-gradient(circle, transparent 42%, ${palette.cyan} 50%, transparent 72%)`,
+        background: `radial-gradient(circle, transparent 42%, ${themePalette.highlight} 50%, transparent 72%)`,
         mixBlendMode: "screen",
       }} /> : null}
 
@@ -180,8 +189,8 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
         height: config.headRadiusPx * px * 2,
         transform: "translate(-50%, -50%)",
         borderRadius: "50%",
-        background: palette.ink,
-        boxShadow: `0 0 ${14 * px}px ${6 * px}px ${palette.cyan}`,
+        background: themePalette.highlight,
+        boxShadow: `0 0 ${14 * px}px ${6 * px}px ${themePalette.primary}`,
         opacity: beamOpacity,
         mixBlendMode: "screen",
       }} /> : null}
@@ -195,7 +204,7 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
         transform: `translate(-50%, -50%) scale(${(0.3 + arrival * 0.7).toFixed(3)})`,
         borderRadius: "50%",
         opacity: arrival * (1 - Math.max(0, arrival - 0.72) / 0.28) * config.impactOpacity,
-        background: `radial-gradient(circle, ${palette.ink} 0%, ${palette.cyan} 18%, transparent 72%)`,
+        background: `radial-gradient(circle, ${themePalette.highlight} 0%, ${themePalette.primary} 22%, transparent 72%)`,
         filter: `blur(${4 * px}px)`,
         mixBlendMode: "screen",
       }} />
@@ -211,6 +220,7 @@ export type CaptionEnergySurfaceProps = {
   reduced?: boolean;
   children: React.ReactNode;
   config?: Partial<CaptionEnergyConfig>;
+  theme?: HookBgTheme;
 };
 
 // An opaque-enough local contrast field plus backdrop blur. Its dual dark
@@ -223,10 +233,13 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
   reduced,
   children,
   config: overrides,
+  theme,
 }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const config = { ...captionEnergyConfig, ...overrides };
+  const themePalette: HookBgPalette =
+    hookBgPalettes[theme ?? hookConfig.background.themeOverride ?? hookConfig.background.defaultTheme];
   const px = width / 1080;
   const local = frame - window.startFrame;
   const revealStart = reduced ? 0 : atFps(config.ignitionFrames + config.travelFrames - 3, fps);
@@ -284,10 +297,11 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
         borderRadius: radius * px,
         opacity: config.surfaceOpacity * reveal * (1 - exit),
         background: `
-          radial-gradient(ellipse 72% 110% at 50% 100%, rgba(34,211,238,0.18) 0%, transparent 68%),
-          linear-gradient(135deg, rgba(5,12,24,0.96) 0%, rgba(11,31,58,0.9) 52%, rgba(3,9,18,0.96) 100%)`,
-        border: `${Math.max(1, px)}px solid rgba(248,250,252,0.18)`,
-        boxShadow: `0 ${8 * px}px ${32 * px}px rgba(0,0,0,0.58), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 ${22 * px}px rgba(34,211,238,0.1)`,
+          radial-gradient(ellipse 72% 110% at 50% 100%, color-mix(in oklch, ${themePalette.highlight} 24%, transparent) 0%, transparent 66%),
+          radial-gradient(ellipse 62% 90% at 16% 18%, color-mix(in oklch, ${themePalette.secondary} 48%, transparent) 0%, transparent 72%),
+          linear-gradient(135deg, ${themePalette.vignette} 0%, color-mix(in oklch, ${themePalette.base} 92%, black) 48%, color-mix(in oklch, ${themePalette.primary} 54%, ${themePalette.base}) 100%)`,
+        border: `${Math.max(1, px)}px solid color-mix(in oklch, ${themePalette.highlight} 28%, transparent)`,
+        boxShadow: `0 ${8 * px}px ${32 * px}px rgba(0,0,0,0.58), inset 0 1px 0 color-mix(in oklch, ${themePalette.highlight} 20%, transparent), 0 0 ${22 * px}px color-mix(in oklch, ${themePalette.primary} 18%, transparent)`,
         WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.72) brightness(0.72)`,
         backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.72) brightness(0.72)`,
         WebkitMaskImage: mask,

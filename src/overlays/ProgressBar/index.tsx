@@ -14,6 +14,12 @@ import { progressBarConfig, type ProgressBarConfig } from "./config";
 import { getProgressBarGeometry, normalizedReelProgress } from "./math";
 import type { OverlayWindow } from "../types";
 import { captionEnergyConfig } from "../CaptionEnergy/config";
+import { hookConfig } from "../Hook/config";
+import {
+  hookBgPalettes,
+  parseHookBgTheme,
+  type HookBgTheme,
+} from "../HookBg/themes";
 
 export type ProgressBarProps = {
   direction?: "rtl" | "ltr";
@@ -22,6 +28,8 @@ export type ProgressBarProps = {
   // Caption windows make the circle physically react when it emits and
   // reabsorbs a caption. Optional, so the component remains reusable.
   interactionWindows?: OverlayWindow[];
+  // Uses the same resolved editorial identity as HookBg and captions.
+  theme?: HookBgTheme;
 };
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
@@ -29,11 +37,17 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   reduced,
   config: overrides,
   interactionWindows = [],
+  theme,
 }) => {
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
   const gradientId = useId().replaceAll(":", "");
   const config = { ...progressBarConfig, ...overrides };
+  const resolvedTheme =
+    parseHookBgTheme(theme) ??
+    parseHookBgTheme(hookConfig.background.themeOverride) ??
+    hookConfig.background.defaultTheme;
+  const themePalette = hookBgPalettes[resolvedTheme];
 
   if (!config.enabled) {
     return null;
@@ -144,7 +158,14 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           justifyContent: "center",
           overflow: "hidden",
           borderRadius: "50%",
-          background: `color-mix(in oklch, ${config.backgroundColor} ${Math.round(Math.min(1, Math.max(0, config.backgroundOpacity)) * 100)}%, transparent)`,
+          background: `
+            radial-gradient(circle at 34% 24%, color-mix(in oklch, ${themePalette.highlight} 24%, transparent) 0%, transparent 42%),
+            radial-gradient(circle at 76% 82%, color-mix(in oklch, ${themePalette.secondary} 58%, transparent) 0%, transparent 60%),
+            linear-gradient(145deg, ${themePalette.primary} 0%, ${themePalette.base} 58%, ${themePalette.vignette} 100%)`,
+          boxShadow: `
+            inset 0 1px 0 color-mix(in oklch, ${themePalette.highlight} 32%, transparent),
+            inset 0 0 ${24 * scale}px color-mix(in oklch, ${themePalette.vignette} 72%, transparent),
+            0 0 ${18 * scale}px color-mix(in oklch, ${themePalette.primary} 24%, transparent)`,
         }}
       >
         <Img
@@ -155,6 +176,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
             height: `${config.logoSizePct}%`,
             objectFit: "contain",
             opacity: staticLogoOpacity,
+            // Logo media is authored over black. Screen blending preserves
+            // its white/gold strokes while revealing the editorial theme
+            // gradient underneath instead of showing a black square.
+            mixBlendMode: "screen",
           }}
         />
         <Sequence durationInFrames={animatedLogoDurationFrames} layout="none">
@@ -168,6 +193,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               height: `${config.logoSizePct}%`,
               objectFit: "contain",
               opacity: animatedLogoOpacity,
+              mixBlendMode: "screen",
             }}
           />
         </Sequence>

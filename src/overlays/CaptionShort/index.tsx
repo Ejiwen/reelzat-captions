@@ -11,6 +11,7 @@ import type { OverlayBaseProps } from "../types";
 import { progressBarConfig } from "../ProgressBar/config";
 import { captionBottomOffsetAboveProgressPx } from "../ProgressBar/math";
 import { captionShortDefaultAnimation } from "./animations";
+import type { HookBgTheme } from "../HookBg/themes";
 
 export type CaptionShortProps = OverlayBaseProps & {
   data: {
@@ -19,6 +20,7 @@ export type CaptionShortProps = OverlayBaseProps & {
   };
   // Word-level entrance (3-frame stagger on springs.enter). On by default.
   stagger?: boolean;
+  theme?: HookBgTheme;
 };
 
 // One big line — auto-fit with @remotion/layout-utils, never wrapped. The
@@ -35,6 +37,7 @@ export const CaptionShort: React.FC<CaptionShortProps> = ({
   fontScale = 1,
   stagger = true,
   reduced,
+  theme,
 }) => {
   const { width, height } = useVideoConfig();
   const text = data.lines[0] ?? "";
@@ -82,6 +85,7 @@ export const CaptionShort: React.FC<CaptionShortProps> = ({
         lineCount={1}
         position={position}
         textZone={textZone}
+        theme={theme}
         reduced={reduced}
       >
         <CaptionLines

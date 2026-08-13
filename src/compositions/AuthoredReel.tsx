@@ -136,6 +136,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         direction={pkg.direction}
         reduced={reduced}
         interactionWindows={captions.map((caption) => caption.window)}
+        theme={resolvedHookBgTheme}
       />
       {mode === "burn" ? (
         <CaptionScrim windows={bottomCaptionWindows} bottomPct={pkg.safeArea.bottomPct} />
@@ -158,6 +159,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
             textZone={zoneFor(pkg, caption.position)}
             lineCount={caption.type === "short_1line" ? 1 : 2}
             reduced={reduced}
+            theme={resolvedHookBgTheme}
           />
           <AuthoredCaption
             caption={caption}
@@ -165,6 +167,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
             fontScale={fontScale}
             animation={captionAnimation}
             reduced={reduced}
+            theme={resolvedHookBgTheme}
           />
         </React.Fragment>
       ))}
@@ -211,7 +214,8 @@ const AuthoredCaption: React.FC<{
   fontScale: number;
   animation: AuthoredReelProps["captionAnimation"];
   reduced: boolean;
-}> = ({ caption, pkg, fontScale, animation, reduced }) => {
+  theme: ReturnType<typeof resolveHookBgTheme>;
+}> = ({ caption, pkg, fontScale, animation, reduced, theme }) => {
   const shared = {
     window: caption.window,
     position: caption.position,
@@ -221,6 +225,7 @@ const AuthoredCaption: React.FC<{
     textZone: zoneFor(pkg, caption.position),
     fontScale,
     reduced,
+    theme,
   };
   return caption.type === "short_1line" ? (
     <CaptionShort data={{ lines: caption.lines }} {...shared} />

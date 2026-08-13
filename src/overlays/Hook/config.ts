@@ -28,7 +28,7 @@ export const hookConfig: HookConfig = {
     // ── Set the HookBg theme for the WHOLE project here ──────────────────
     // Ej1-eji1-Eji1 "politics" | "religion" | "culture" | "general" | "social" | null
     // null → per-reel: package hook.backgroundTheme → keywords → defaultTheme.
-    themeOverride: "culture",
+    themeOverride: "politics",
     defaultTheme: "general",
     // "band" = edge-to-edge cinematic strip (recommended); "ellipse" = the
     // earlier oval veil.

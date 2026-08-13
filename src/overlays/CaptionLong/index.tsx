@@ -11,6 +11,7 @@ import type { OverlayBaseProps } from "../types";
 import { progressBarConfig } from "../ProgressBar/config";
 import { captionBottomOffsetAboveProgressPx } from "../ProgressBar/math";
 import { captionLongDefaultAnimation } from "./animations";
+import type { HookBgTheme } from "../HookBg/themes";
 
 export type CaptionLongProps = OverlayBaseProps & {
   data: {
@@ -18,6 +19,7 @@ export type CaptionLongProps = OverlayBaseProps & {
     lines: string[];
   };
   stagger?: boolean;
+  theme?: HookBgTheme;
 };
 
 // Two balanced lines. One font size for both — fitted to the wider line so
@@ -34,6 +36,7 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
   fontScale = 1,
   stagger = true,
   reduced,
+  theme,
 }) => {
   const { width, height } = useVideoConfig();
 
@@ -87,6 +90,7 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
         lineCount={2}
         position={position}
         textZone={textZone}
+        theme={theme}
         reduced={reduced}
       >
         <CaptionLines
