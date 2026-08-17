@@ -1,13 +1,16 @@
-import { fitText } from "@remotion/layout-utils";
 import React, { useMemo } from "react";
 import { useVideoConfig } from "remotion";
-import { fontFamily, reelTypography } from "../../design/fonts";
-import { overlayType, spacing, typeScale } from "../../design/tokens";
+import { overlayType } from "../../design/tokens";
 import { tokenizeLine } from "../../schema/captions";
 import { CaptionLines } from "../CaptionLines";
 import { CaptionEnergySurface, captionEnergyConfig } from "../CaptionEnergy";
+import {
+  captionTextMaxHeightPx,
+  captionTextMaxWidthPx,
+} from "../CaptionEnergy/math";
+import { measureCaptionLayout } from "../captionLayout";
 import { OverlayRoot } from "../OverlayRoot";
-import type { OverlayBaseProps } from "../types";
+import { DEFAULT_SAFE_AREA, type OverlayBaseProps } from "../types";
 import { progressBarConfig } from "../ProgressBar/config";
 import { captionBottomOffsetAboveProgressPx } from "../ProgressBar/math";
 import { captionLongDefaultAnimation } from "./animations";
@@ -17,14 +20,20 @@ export type CaptionLongProps = OverlayBaseProps & {
   data: {
     // Exactly two authored lines, balanced by the author (enforced upstream).
     lines: string[];
+    emphasis?: string[];
   };
   stagger?: boolean;
   theme?: HookBgTheme;
 };
 
-// Two balanced lines. One font size for both — fitted to the wider line so
-// the pair reads as a block — and a flat word-stagger index running across
-// the line break. Line breaking is the author's decision; nothing re-wraps.
+// Two balanced lines at one shared font size, so the pair reads as a block,
+// with a flat word-stagger index running across the line break.
+//
+// The authored break is the display truth WHILE it holds a confident size.
+// When unusually long words would shrink the block below
+// captionEnergyConfig.reflowMinScale, the words are re-balanced instead —
+// across two lines, or three when the extra line buys visibly bigger type.
+// Words are never re-ordered: only the break moves.
 export const CaptionLong: React.FC<CaptionLongProps> = ({
   data,
   window,
@@ -39,28 +48,18 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
   theme,
 }) => {
   const { width, height } = useVideoConfig();
+  const px = width / 1080;
 
-  const baseSize = width * overlayType.captionSizeFactor * fontScale;
-  const maxLineWidth = width * spacing.maxLineWidthFraction;
+  const resolvedSafeArea = safeArea ?? DEFAULT_SAFE_AREA;
+  const baseSize = width * overlayType.captionLongSizeFactor * fontScale;
+  const maxLineWidth = captionTextMaxWidthPx({
+    width,
+    safeArea: resolvedSafeArea,
+    textZone,
+    paddingInlinePx: captionEnergyConfig.surfacePaddingInlinePx,
+    safeGapPx: captionEnergyConfig.surfaceSafeGapPx,
+  });
 
-  // The wider line dictates the shared size, clamped to [0.75×, 1×] of base —
-  // same floor as the legacy caption page. Measured once per caption.
-  const fontSize = useMemo(() => {
-    let size = baseSize;
-    for (const line of data.lines) {
-      const fitted = fitText({
-        text: line,
-        withinWidth: maxLineWidth,
-        fontFamily,
-        fontWeight: reelTypography.caption,
-        validateFontIsLoaded: true,
-      });
-      size = Math.min(size, fitted.fontSize * 0.98);
-    }
-    return Math.max(size, baseSize * typeScale.minFitScale);
-  }, [data.lines, baseSize, maxLineWidth]);
-
-  const lines = useMemo(() => data.lines.map(tokenizeLine), [data.lines]);
   const bottomOffsetPx =
     position === "bottom"
       ? captionBottomOffsetAboveProgressPx({
@@ -73,13 +72,36 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
         })
       : undefined;
 
+  // A third line grows the card upward, so the vertical budget is what stops
+  // it from reaching into the video content.
+  const maxTextHeight = captionTextMaxHeightPx({
+    height,
+    bottomOffsetPx:
+      bottomOffsetPx ?? height - (height * resolvedSafeArea.topPct) / 100,
+    topLimitPct:
+      position === "bottom" ? captionEnergyConfig.surfaceTopLimitPct : 0,
+    paddingBlockPx: captionEnergyConfig.surfacePaddingBlockPx * px * 1.1,
+  });
+
+  const layout = useMemo(
+    () =>
+      measureCaptionLayout({
+        lines: data.lines.map(tokenizeLine),
+        baseFontSize: baseSize,
+        maxTextWidthPx: maxLineWidth,
+        maxTextHeightPx: maxTextHeight,
+        maxLineCount: captionEnergyConfig.maxLineCount,
+      }),
+    [data.lines, baseSize, maxLineWidth, maxTextHeight],
+  );
+
   return (
     <OverlayRoot
       window={window}
       position={position}
       direction={direction}
       animation={animation}
-      safeArea={safeArea}
+      safeArea={resolvedSafeArea}
       textZone={textZone}
       bottomOffsetPx={bottomOffsetPx}
       reduced={reduced}
@@ -87,20 +109,25 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
     >
       <CaptionEnergySurface
         window={window}
-        lineCount={2}
+        lineCount={layout.lines.length}
         position={position}
         textZone={textZone}
+        safeArea={resolvedSafeArea}
         theme={theme}
         reduced={reduced}
       >
         <CaptionLines
-          lines={lines}
-          fontSize={fontSize}
+          lines={layout.lines}
+          fontSize={layout.fontSize}
           direction={direction}
           windowStartFrame={window.startFrame}
-          entranceDelayFrames={reduced ? 0 : captionEnergyConfig.textDelayFrames}
+          entranceDelayFrames={
+            reduced ? 0 : captionEnergyConfig.textDelayFrames
+          }
           stagger={stagger}
           reduced={reduced}
+          theme={theme}
+          emphasis={data.emphasis}
         />
       </CaptionEnergySurface>
     </OverlayRoot>

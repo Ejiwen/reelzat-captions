@@ -1,0 +1,14 @@
+{
+  "data": {
+    "lines": [
+      "على قدر أهل العزم تأتي العزائم",
+      "وتأتي على قدر الكرام المكارم",
+      "وتعظم في عين الصغير صغارها"
+    ],
+    "verse": true,
+    "emphasis": ["العزم", "المكارم"]
+  },
+  "window": { "startFrame": 15, "endFrame": 125 },
+  "position": "bottom",
+  "direction": "rtl"
+}

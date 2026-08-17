@@ -18,8 +18,12 @@ export type TextDirection = z.infer<typeof textDirectionSchema>;
 // Display windows are clip-relative SECONDS (floats) — the only place seconds
 // exist. resolve.ts converts them to frames exactly once.
 export const displayWindowSchema = z.object({
-  start: z.number().nonnegative("display.start must be >= 0 (clip-relative seconds)"),
-  end: z.number().nonnegative("display.end must be >= 0 (clip-relative seconds)"),
+  start: z
+    .number()
+    .nonnegative("display.start must be >= 0 (clip-relative seconds)"),
+  end: z
+    .number()
+    .nonnegative("display.end must be >= 0 (clip-relative seconds)"),
 });
 export type DisplayWindow = z.infer<typeof displayWindowSchema>;
 
@@ -31,7 +35,11 @@ export const safeAreaSchema = z.object({
 });
 export type SafeArea = z.infer<typeof safeAreaSchema>;
 
-export const defaultSafeArea: SafeArea = { topPct: 14, bottomPct: 20, sidePct: 7 };
+export const defaultSafeArea: SafeArea = {
+  topPct: 14,
+  bottomPct: 20,
+  sidePct: 7,
+};
 
 // ---------------------------------------------------------------------------
 // authoring.json — video-watcher's curated overlay script
@@ -57,14 +65,29 @@ export const authoredHookSchema = z.object({
   backgroundTheme: z.string().optional(),
 });
 
+export const authoredWordSchema = z.object({
+  text: z.string().min(1, "authored word text must not be empty"),
+  in_reel: displayWindowSchema,
+  in_source: displayWindowSchema,
+});
+export type AuthoredWord = z.infer<typeof authoredWordSchema>;
+
 export const authoredCaptionSchema = z.object({
-  type: z.enum(["short_1line", "long_2lines"]),
+  type: z.enum(["short_1line", "long_2lines", "regular"]),
   lines: z
     .array(z.string().min(1, "caption line must not be empty"))
-    .min(1, "caption must have at least one line")
-    .max(2, "caption must have at most two lines"),
+    .min(1, "caption must have at least one line"),
   position: overlayPositionSchema,
   display: displayWindowSchema,
+  words: z
+    .array(authoredWordSchema)
+    .min(1, "words must not be empty")
+    .optional(),
+  verse: z.boolean().default(false),
+  emphasis: z
+    .array(z.string().min(1, "emphasis word must not be empty"))
+    .max(2)
+    .optional(),
 });
 
 export const authoringSchema = z.object({
@@ -158,15 +181,24 @@ export const normalizeWordTiming = (w: unknown): unknown => {
 // segment { id, startMs, endMs, text, words }. Ids are generated (cue-001…)
 // because the emitter writes none.
 export const normalizeAsrCue = (cue: unknown, index: number): unknown => {
-  if (!isRecord(cue) || typeof cue["startMs"] === "number" || typeof cue["start"] !== "number") {
+  if (
+    !isRecord(cue) ||
+    typeof cue["startMs"] === "number" ||
+    typeof cue["start"] !== "number"
+  ) {
     return cue;
   }
   return {
-    id: typeof cue["id"] === "string" ? cue["id"] : `cue-${String(index + 1).padStart(3, "0")}`,
+    id:
+      typeof cue["id"] === "string"
+        ? cue["id"]
+        : `cue-${String(index + 1).padStart(3, "0")}`,
     startMs: Math.round((cue["start"] as number) * 1000),
     endMs: Math.round((cue["end"] as number) * 1000),
     text: cue["text"],
-    words: Array.isArray(cue["words"]) ? cue["words"].map(normalizeWordTiming) : [],
+    words: Array.isArray(cue["words"])
+      ? cue["words"].map(normalizeWordTiming)
+      : [],
   };
 };
 
@@ -178,7 +210,11 @@ const normalizeSafeArea = (sa: unknown): unknown => {
     return sa;
   }
   const pct = (v: unknown, fallback: number): number =>
-    typeof v === "number" ? (v < 1 ? Math.round(v * 10000) / 100 : v) : fallback;
+    typeof v === "number"
+      ? v < 1
+        ? Math.round(v * 10000) / 100
+        : v
+      : fallback;
   if ("hookTopPct" in sa || "captionBottomPct" in sa) {
     return {
       topPct: pct(sa["hookTopPct"], defaultSafeArea.topPct),
@@ -224,7 +260,8 @@ export const normalizeSidecar = (data: unknown): unknown => {
 // Converted to the canonical top-left percent rectangles used by the debug
 // guides and never-cover-a-face checks.
 export const facesFromSegments = (segments: unknown[]): DirectorZone[] => {
-  const clamp = (v: number) => Math.min(100, Math.max(0, Math.round(v * 100) / 100));
+  const clamp = (v: number) =>
+    Math.min(100, Math.max(0, Math.round(v * 100) / 100));
   const out: DirectorZone[] = [];
   for (const seg of segments) {
     if (!isRecord(seg) || !Array.isArray(seg["faces"])) {
@@ -270,7 +307,10 @@ export const wordsFileSchema = z.preprocess(
     return v;
   },
   z
-    .union([z.array(wordTimingSchema), z.object({ words: z.array(wordTimingSchema) })])
+    .union([
+      z.array(wordTimingSchema),
+      z.object({ words: z.array(wordTimingSchema) }),
+    ])
     .transform((v) => (Array.isArray(v) ? v : v.words)),
 );
 
@@ -296,7 +336,9 @@ export const directorSchema = z.object({
     )
     .default([]),
   textSafeZones: z
-    .array(directorZoneSchema.extend({ position: overlayPositionSchema.optional() }))
+    .array(
+      directorZoneSchema.extend({ position: overlayPositionSchema.optional() }),
+    )
     .default([]),
   cuts: z.array(z.number().nonnegative()).default([]),
   split: z.unknown().optional(),
@@ -334,8 +376,12 @@ export const normalizeDirector = (data: unknown): unknown => {
             yPct: r(box["y"]),
             wPct: r(box["w"]),
             hPct: r(box["h"]),
-            ...(typeof f["t0"] === "number" ? { startMs: Math.round(f["t0"] * 1000) } : {}),
-            ...(typeof f["t1"] === "number" ? { endMs: Math.round(f["t1"] * 1000) } : {}),
+            ...(typeof f["t0"] === "number"
+              ? { startMs: Math.round(f["t0"] * 1000) }
+              : {}),
+            ...(typeof f["t1"] === "number"
+              ? { endMs: Math.round(f["t1"] * 1000) }
+              : {}),
           };
         }
         return null;

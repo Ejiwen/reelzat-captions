@@ -14,7 +14,19 @@ export type WordStaggerCtx = {
   index: number;
   windowStartFrame: number;
   reduced?: boolean;
+  // Per-word delay. Defaults to the token value; long captions pass the
+  // compressed value from wordStaggerFrames() so the block still lands fast.
+  staggerFrames?: number;
 };
+
+// The stagger a caption of `wordCount` words should use: the token value,
+// compressed just enough that the last word starts within
+// motion.maxStaggerSpanFrames of the first. Fractional frames are fine —
+// spring() reads a continuous frame.
+export const wordStaggerFrames = (wordCount: number): number =>
+  wordCount <= 1
+    ? motion.staggerFrames
+    : Math.min(motion.staggerFrames, motion.maxStaggerSpanFrames / (wordCount - 1));
 
 export const staggeredWordStyle = ({
   frame,
@@ -22,8 +34,9 @@ export const staggeredWordStyle = ({
   index,
   windowStartFrame,
   reduced,
+  staggerFrames = motion.staggerFrames,
 }: WordStaggerCtx): React.CSSProperties => {
-  const entryFrame = windowStartFrame + index * motion.staggerFrames;
+  const entryFrame = windowStartFrame + index * staggerFrames;
   const local = frame - entryFrame;
 
   if (reduced) {
@@ -49,4 +62,4 @@ export const staggeredWordStyle = ({
 // Frames it takes the LAST of `wordCount` words to finish entering — used by
 // OverlayRoot's trail gate indirectly (isInEntryWindow) and by demos.
 export const staggerSettleFrames = (wordCount: number): number =>
-  (wordCount - 1) * motion.staggerFrames + motion.wordTransitionFrames * 3;
+  (wordCount - 1) * wordStaggerFrames(wordCount) + motion.wordTransitionFrames * 3;

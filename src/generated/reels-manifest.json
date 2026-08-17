@@ -1,30 +1,5 @@
 {
   "schemaVersion": 1,
   "sourceDir": "public/reels",
-  "reels": [
-    {
-      "id": "promo-001",
-      "dir": "reels/promo-001",
-      "kind": "promo",
-      "captionSource": "authored",
-      "title": "برومو الحلقة",
-      "width": 1080,
-      "height": 1920,
-      "fps": 30,
-      "durationInFrames": 240,
-      "direction": "rtl"
-    },
-    {
-      "id": "reel-001",
-      "dir": "reels/reel-001",
-      "kind": "reel",
-      "captionSource": "authored",
-      "title": "نبوءة 1993: تقسيم السودان إلى أربع دول",
-      "width": 1080,
-      "height": 1920,
-      "fps": 30,
-      "durationInFrames": 794,
-      "direction": "rtl"
-    }
-  ]
+  "reels": []
 }

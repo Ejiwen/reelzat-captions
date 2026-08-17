@@ -2,41 +2,40 @@ import React, { useMemo } from "react";
 import { useVideoConfig } from "remotion";
 import { overlayType } from "../../design/tokens";
 import { tokenizeLine } from "../../schema/captions";
-import { CaptionLines } from "../CaptionLines";
+import { CaptionLines, type AuthoredWordFrameTiming } from "../CaptionLines";
 import { CaptionEnergySurface, captionEnergyConfig } from "../CaptionEnergy";
 import {
   captionTextMaxHeightPx,
   captionTextMaxWidthPx,
 } from "../CaptionEnergy/math";
 import { measureCaptionLayout } from "../captionLayout";
+import type { HookBgTheme } from "../HookBg/themes";
 import { OverlayRoot } from "../OverlayRoot";
-import { DEFAULT_SAFE_AREA, type OverlayBaseProps } from "../types";
 import { progressBarConfig } from "../ProgressBar/config";
 import { captionBottomOffsetAboveProgressPx } from "../ProgressBar/math";
-import { captionShortDefaultAnimation } from "./animations";
-import type { HookBgTheme } from "../HookBg/themes";
+import { DEFAULT_SAFE_AREA, type OverlayBaseProps } from "../types";
+import { captionRegularDefaultAnimation } from "./animations";
 
-export type CaptionShortProps = OverlayBaseProps & {
+export type CaptionRegularProps = OverlayBaseProps & {
   data: {
-    // Exactly one authored line, ≤5 words (enforced upstream).
     lines: string[];
+    words?: Array<AuthoredWordFrameTiming & { text: string }>;
     emphasis?: string[];
+    verse?: boolean;
   };
-  // Word-level entrance (3-frame stagger on springs.enter). On by default.
   stagger?: boolean;
   theme?: HookBgTheme;
 };
 
-// One big line — measured word by word, never wrapped. The authored line is
-// the display truth; words enter with the shared stagger and the container
-// exits as one. It shares the caption band, card and bottom anchor with
-// CaptionLong, so the two read as the same object at different lengths.
-export const CaptionShort: React.FC<CaptionShortProps> = ({
+// Verbatim authored captions. Timed words use the karaoke treatment; without
+// timing they retain the established authored word stagger. `verse` fixes
+// every authored hemistich on its own centred line and only scales the block.
+export const CaptionRegular: React.FC<CaptionRegularProps> = ({
   data,
   window,
   position,
   direction,
-  animation = captionShortDefaultAnimation,
+  animation = captionRegularDefaultAnimation,
   safeArea,
   textZone,
   fontScale = 1,
@@ -45,11 +44,9 @@ export const CaptionShort: React.FC<CaptionShortProps> = ({
   theme,
 }) => {
   const { width, height } = useVideoConfig();
-  const text = data.lines[0] ?? "";
   const px = width / 1080;
-
   const resolvedSafeArea = safeArea ?? DEFAULT_SAFE_AREA;
-  const baseSize = width * overlayType.captionShortSizeFactor * fontScale;
+  const baseSize = width * overlayType.captionRegularSizeFactor * fontScale;
   const maxLineWidth = captionTextMaxWidthPx({
     width,
     safeArea: resolvedSafeArea,
@@ -57,7 +54,6 @@ export const CaptionShort: React.FC<CaptionShortProps> = ({
     paddingInlinePx: captionEnergyConfig.surfacePaddingInlinePx,
     safeGapPx: captionEnergyConfig.surfaceSafeGapPx,
   });
-
   const bottomOffsetPx =
     position === "bottom"
       ? captionBottomOffsetAboveProgressPx({
@@ -69,27 +65,28 @@ export const CaptionShort: React.FC<CaptionShortProps> = ({
           clearancePx: progressBarConfig.captionClearancePx,
         })
       : undefined;
-
   const maxTextHeight = captionTextMaxHeightPx({
     height,
     bottomOffsetPx:
       bottomOffsetPx ?? height - (height * resolvedSafeArea.topPct) / 100,
     topLimitPct:
       position === "bottom" ? captionEnergyConfig.surfaceTopLimitPct : 0,
-    paddingBlockPx: captionEnergyConfig.surfacePaddingBlockPx * px,
+    paddingBlockPx: captionEnergyConfig.surfacePaddingBlockPx * px * 1.1,
   });
 
-  // No wrapping, ever: maxLineCount 1 means the fitted size wins outright.
   const layout = useMemo(
     () =>
       measureCaptionLayout({
-        lines: [tokenizeLine(text)],
+        lines: data.lines.map(tokenizeLine),
         baseFontSize: baseSize,
         maxTextWidthPx: maxLineWidth,
         maxTextHeightPx: maxTextHeight,
-        maxLineCount: 1,
+        maxLineCount: data.verse
+          ? data.lines.length
+          : Math.max(data.lines.length, captionEnergyConfig.maxLineCount),
+        preserveLines: data.verse,
       }),
-    [text, baseSize, maxLineWidth, maxTextHeight],
+    [data.lines, data.verse, baseSize, maxLineWidth, maxTextHeight],
   );
 
   return (
@@ -102,11 +99,11 @@ export const CaptionShort: React.FC<CaptionShortProps> = ({
       textZone={textZone}
       bottomOffsetPx={bottomOffsetPx}
       reduced={reduced}
-      trailOnEntry={stagger}
+      trailOnEntry={stagger && !data.words}
     >
       <CaptionEnergySurface
         window={window}
-        lineCount={1}
+        lineCount={layout.lines.length}
         position={position}
         textZone={textZone}
         safeArea={resolvedSafeArea}
@@ -121,10 +118,12 @@ export const CaptionShort: React.FC<CaptionShortProps> = ({
           entranceDelayFrames={
             reduced ? 0 : captionEnergyConfig.textDelayFrames
           }
-          stagger={stagger}
+          stagger={stagger && !data.words}
           reduced={reduced}
           theme={theme}
+          words={data.words}
           emphasis={data.emphasis}
+          verse={data.verse}
         />
       </CaptionEnergySurface>
     </OverlayRoot>

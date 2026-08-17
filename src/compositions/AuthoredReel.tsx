@@ -5,6 +5,7 @@ import type { ReelPackage, ResolvedAuthoredCaption } from "../ingest/resolve";
 import {
   CaptionLong,
   CaptionEnergyBridge,
+  CaptionRegular,
   CaptionShort,
   Hook,
   MidReelCta,
@@ -307,7 +308,8 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
             window={caption.window}
             position={caption.position}
             textZone={zoneFor(pkg, caption.position)}
-            lineCount={caption.type === "short_1line" ? 1 : 2}
+            safeArea={pkg.safeArea}
+            lineCount={captionLineCount(caption)}
             reduced={reduced}
             theme={resolvedHookBgTheme}
           />
@@ -405,9 +407,43 @@ const AuthoredCaption: React.FC<{
     reduced,
     theme,
   };
-  return caption.type === "short_1line" ? (
-    <CaptionShort data={{ lines: caption.lines }} {...shared} />
-  ) : (
-    <CaptionLong data={{ lines: caption.lines }} {...shared} />
-  );
+  switch (caption.type) {
+    case "short_1line":
+      return (
+        <CaptionShort
+          data={{ lines: caption.lines, emphasis: caption.emphasis }}
+          {...shared}
+        />
+      );
+    case "long_2lines":
+      return (
+        <CaptionLong
+          data={{ lines: caption.lines, emphasis: caption.emphasis }}
+          {...shared}
+        />
+      );
+    case "regular":
+      return (
+        <CaptionRegular
+          data={{
+            lines: caption.lines,
+            words: caption.words,
+            verse: caption.verse,
+            emphasis: caption.emphasis,
+          }}
+          {...shared}
+        />
+      );
+  }
+};
+
+const captionLineCount = (caption: ResolvedAuthoredCaption): number => {
+  switch (caption.type) {
+    case "short_1line":
+      return 1;
+    case "long_2lines":
+      return 2;
+    case "regular":
+      return caption.lines.length;
+  }
 };

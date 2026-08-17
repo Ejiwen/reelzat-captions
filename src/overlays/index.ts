@@ -27,6 +27,7 @@ export {
 } from "./HookEnergyBridge";
 export { CaptionShort, type CaptionShortProps } from "./CaptionShort";
 export { CaptionLong, type CaptionLongProps } from "./CaptionLong";
+export { CaptionRegular, type CaptionRegularProps } from "./CaptionRegular";
 export {
   CaptionEnergyBridge,
   CaptionEnergySurface,
@@ -49,4 +50,8 @@ export {
   type ProgressBarConfig,
 } from "./ProgressBar";
 export { SafeAreaGuides, WindowTimeline, type TimelineItem } from "./SafeArea";
-export { staggeredWordStyle, staggerSettleFrames } from "./wordStagger";
+export {
+  staggeredWordStyle,
+  staggerSettleFrames,
+  wordStaggerFrames,
+} from "./wordStagger";

@@ -1,0 +1,15 @@
+{
+  "data": {
+    "lines": ["المعرفة تبدأ بالسؤال الجيد"],
+    "words": [
+      { "text": "المعرفة", "startFrame": 20, "endFrame": 38 },
+      { "text": "تبدأ", "startFrame": 38, "endFrame": 55 },
+      { "text": "بالسؤال", "startFrame": 55, "endFrame": 76 },
+      { "text": "الجيد", "startFrame": 76, "endFrame": 98 }
+    ],
+    "emphasis": ["بالسؤال"]
+  },
+  "window": { "startFrame": 15, "endFrame": 125 },
+  "position": "bottom",
+  "direction": "rtl"
+}

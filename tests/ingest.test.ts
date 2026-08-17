@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { join } from "node:path";
 import { discoverReels, loadReelPackageFromDisk } from "../src/ingest/node";
 import { resolveReelPackage, secondsToFrames } from "../src/ingest/resolve";
+import { authoredCaptionSchema } from "../src/ingest/schemas";
 import {
   captionBottomOffsetAboveProgressPx,
   facebookSafeRegionBottomPct,
@@ -124,14 +125,160 @@ test("authored display windows convert to frames exactly once, at ingest", () =>
   });
   assert.equal(pkg.media.durationInFrames, 801);
   assert.deepEqual(pkg.authored?.hook.window, { startFrame: 0, endFrame: 90 });
-  assert.deepEqual(pkg.authored?.captions[0]?.window, { startFrame: 360, endFrame: 450 });
+  assert.deepEqual(pkg.authored?.captions[0]?.window, {
+    startFrame: 360,
+    endFrame: 450,
+  });
+});
+
+test("authored 2.2 caption fields round-trip through the schema", () => {
+  const raw = {
+    type: "regular" as const,
+    lines: ["العلم يبدأ بالسؤال"],
+    position: "bottom" as const,
+    display: { start: 4, end: 7 },
+    words: [
+      {
+        text: "العلم",
+        in_reel: { start: 4, end: 4.8 },
+        in_source: { start: 104, end: 104.8 },
+      },
+    ],
+    verse: false,
+    emphasis: ["السؤال"],
+  };
+  assert.deepEqual(authoredCaptionSchema.parse(raw), raw);
+  assert.equal(
+    authoredCaptionSchema.parse({
+      type: "regular",
+      lines: ["سطر"],
+      position: "bottom",
+      display: { start: 0, end: 1 },
+    }).verse,
+    false,
+  );
+});
+
+test("regular authored word seconds resolve to frames and metadata is retained", () => {
+  const words = [
+    ["العلم", 4, 4.75],
+    ["يبدأ", 4.75, 5.5],
+    ["بالسؤال", 5.5, 6.5],
+  ] as const;
+  const pkg = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring({
+      captions: [
+        {
+          type: "regular",
+          lines: ["العلم يبدأ بالسؤال"],
+          position: "bottom",
+          display: { start: 4, end: 7 },
+          words: words.map(([text, start, end]) => ({
+            text,
+            in_reel: { start, end },
+            in_source: { start: start + 100, end: end + 100 },
+          })),
+          emphasis: ["بالسؤال"],
+        },
+      ],
+    }),
+  });
+  assert.deepEqual(pkg.authored?.captions[0]?.words, [
+    { text: "العلم", startFrame: 120, endFrame: 142 },
+    { text: "يبدأ", startFrame: 142, endFrame: 165 },
+    { text: "بالسؤال", startFrame: 165, endFrame: 195 },
+  ]);
+  assert.deepEqual(pkg.authored?.captions[0]?.emphasis, ["بالسؤال"]);
+  assert.equal(pkg.authored?.captions[0]?.verse, false);
+});
+
+test("one authored reel may contain short, long, and regular caption types", () => {
+  const pkg = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring({
+      captions: [
+        {
+          type: "short_1line",
+          lines: ["قصير"],
+          position: "bottom",
+          display: { start: 4, end: 6 },
+        },
+        {
+          type: "long_2lines",
+          lines: ["سطر أول", "سطر ثان"],
+          position: "bottom",
+          display: { start: 7, end: 10 },
+        },
+        {
+          type: "regular",
+          lines: ["نص منطوق كامل"],
+          position: "bottom",
+          display: { start: 11, end: 14 },
+        },
+      ],
+    }),
+  });
+  assert.deepEqual(
+    pkg.authored?.captions.map((caption) => caption.type),
+    ["short_1line", "long_2lines", "regular"],
+  );
+});
+
+test("malformed regular timing and verse metadata produce clear errors", () => {
+  assert.throws(
+    () =>
+      resolveReelPackage({
+        clipId: "reel-x",
+        packageDir: "reels/reel-x",
+        sidecar: validSidecar(),
+        authoring: validAuthoring({
+          captions: [
+            {
+              type: "regular",
+              lines: ["كلمة واحدة"],
+              position: "bottom",
+              display: { start: 4, end: 7 },
+              verse: true,
+              words: [
+                {
+                  text: "كلمة",
+                  in_reel: { start: 3.5, end: 4.5 },
+                  in_source: { start: 10, end: 9 },
+                },
+              ],
+              emphasis: ["غائبة"],
+            },
+          ],
+        }),
+      }),
+    (err: unknown) => {
+      const message = (err as Error).message;
+      assert.match(message, /verse must contain at least 2 hemistich lines/);
+      assert.match(
+        message,
+        /regular words must match the rendered token count/,
+      );
+      assert.match(message, /in_reel must be contained within caption display/);
+      assert.match(message, /in_source: end must be greater than start/);
+      assert.match(message, /emphasis word "غائبة" does not occur/);
+      return true;
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------
 // Discriminator
 
 test("missing captionSource defaults to asr (v1 packages)", () => {
-  const sidecar = validSidecar({ captionSource: undefined, authoring: undefined });
+  const sidecar = validSidecar({
+    captionSource: undefined,
+    authoring: undefined,
+  });
   delete (sidecar as Record<string, unknown>)["captionSource"];
   delete (sidecar as Record<string, unknown>)["authoring"];
   const pkg = resolveReelPackage({
@@ -185,8 +332,10 @@ test("same-position overlaps and out-of-clip windows are rejected", () => {
             {
               type: "short_1line",
               lines: ["سطر"],
+              // Authored at opposite ends of the frame, but BOTH render in the
+              // caption band — so overlapping in time is a collision.
               position: "top",
-              display: { start: 2.0, end: 5.0 }, // overlaps the hook (top, 0–3)
+              display: { start: 8.0, end: 11.0 },
             },
             {
               type: "long_2lines",
@@ -199,11 +348,36 @@ test("same-position overlaps and out-of-clip windows are rejected", () => {
       }),
     (err: unknown) => {
       const message = (err as Error).message;
-      assert.match(message, /"hook" and "captions\.0" both sit at position "top" and overlap/);
-      assert.match(message, /captions\.1: display window must sit inside the clip/);
+      assert.match(
+        message,
+        /"captions\.0" and "captions\.1" both sit at position "bottom" and overlap/,
+      );
+      assert.match(
+        message,
+        /captions\.1: display window must sit inside the clip/,
+      );
       return true;
     },
   );
+});
+
+test("a caption authored at the top still resolves into the caption band", () => {
+  const pkg = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring({
+      captions: [
+        {
+          type: "short_1line",
+          lines: ["سطر واحد"],
+          position: "top",
+          display: { start: 6.0, end: 9.0 },
+        },
+      ],
+    }),
+  });
+  assert.equal(pkg.authored?.captions[0]?.position, "bottom");
 });
 
 test("a malformed package yields one report listing every problem", () => {
@@ -232,11 +406,17 @@ test("a malformed package yields one report listing every problem", () => {
     assert.match(message, /Invalid reel package "reel-x" — \d+ problems:/);
     assert.match(message, /clipId mismatch/);
     assert.match(message, /a promo must have zero captions/);
-    assert.match(message, /hook: display\.end must be greater than display\.start/);
+    assert.match(
+      message,
+      /hook: display\.end must be greater than display\.start/,
+    );
     assert.match(message, /long_2lines must have exactly 2 lines/);
     assert.match(message, /display window must sit inside the clip/);
     // Every problem in ONE throw — at least 5 bullet points.
-    assert.ok(message.split("•").length - 1 >= 5, `expected >= 5 bullets in:\n${message}`);
+    assert.ok(
+      message.split("•").length - 1 >= 5,
+      `expected >= 5 bullets in:\n${message}`,
+    );
   }
 });
 
@@ -278,7 +458,15 @@ test("real reelzy v1 sidecar normalises into the canonical package", () => {
       direction: "rtl",
       title: "عنوان",
       safeArea: { captionBottomPct: 0.2, hookTopPct: 0.14 },
-      words: [{ text: "ذيك", start: 0.0, end: 0.44, srcStart: 1017.13, probability: 0.613 }],
+      words: [
+        {
+          text: "ذيك",
+          start: 0.0,
+          end: 0.44,
+          srcStart: 1017.13,
+          probability: 0.613,
+        },
+      ],
       captions: [
         {
           start: 0.0,
@@ -319,11 +507,16 @@ test("real reelzy v1 sidecar normalises into the canonical package", () => {
   assert.equal(cue?.startMs, 0);
   assert.equal(cue?.endMs, 1220);
   // Centre-anchored face fractions → top-left percent rects.
-  assert.deepEqual(pkg.director?.faces, [{ xPct: 22.5, yPct: 0, wPct: 55, hPct: 50 }]);
+  assert.deepEqual(pkg.director?.faces, [
+    { xPct: 22.5, yPct: 0, wPct: 55, hPct: 50 },
+  ]);
 });
 
 test("bare-array captions.json (reelzy seconds cues) is accepted", () => {
-  const sidecar = validSidecar({ captionSource: undefined, authoring: undefined });
+  const sidecar = validSidecar({
+    captionSource: undefined,
+    authoring: undefined,
+  });
   delete (sidecar as Record<string, unknown>)["captionSource"];
   delete (sidecar as Record<string, unknown>)["authoring"];
   const pkg = resolveReelPackage({
@@ -367,14 +560,18 @@ test("all four fixture packages load from disk", () => {
 });
 
 test("reel-001 fixture matches the acceptance choreography", () => {
-  const pkg = loadReelPackageFromDisk(join(fixturesDir, "reel-001"), "reels/reel-001");
+  const pkg = loadReelPackageFromDisk(
+    join(fixturesDir, "reel-001"),
+    "reels/reel-001",
+  );
   assert.equal(pkg.media.durationInFrames, 660); // 22 s @ 30 fps
   assert.equal(pkg.direction, "rtl");
   assert.equal(pkg.authored?.channel, "أسمار وأفكار");
   assert.deepEqual(pkg.authored?.hook.window, { startFrame: 0, endFrame: 90 });
   const [short, long] = pkg.authored!.captions;
   assert.equal(short?.type, "short_1line");
-  assert.equal(short?.position, "top");
+  // authoring.json says "top"; captions always render in the caption band.
+  assert.equal(short?.position, "bottom");
   assert.deepEqual(short?.window, { startFrame: 360, endFrame: 450 });
   assert.equal(long?.type, "long_2lines");
   assert.equal(long?.position, "bottom");

@@ -39,6 +39,10 @@ export const motion = {
   // Numeric limits from the motion principles — themes must stay inside them.
   wordTransitionFrames: 4,
   staggerFrames: 3, // must stay within 2–4
+  // A per-word stagger is only pleasant while the whole line lands quickly.
+  // Past ~9 words, 3 frames each would still be arriving a second in, so the
+  // per-word delay is compressed to keep the entrance inside this span.
+  maxStaggerSpanFrames: 22,
   popTranslatePx: 28, // must stay within 20–40
   popScaleFrom: 0.94, // never below
   karaokeActiveScale: 1.06,
@@ -59,7 +63,12 @@ export const textShadow = "0 2px 12px rgba(0,0,0,0.45)";
 // typeScale.baseSizePx.
 export const overlayType = {
   hookSizeFactor: 0.062, // the strongest element on screen
-  captionSizeFactor: 0.052,
+  // One-line captions may lead slightly; multi-line cards need a quieter
+  // scale so the combined block does not overpower the source image. Both sit
+  // just under hookSizeFactor — the hook stays the strongest element.
+  captionShortSizeFactor: 0.054,
+  captionLongSizeFactor: 0.049,
+  captionRegularSizeFactor: 0.046,
   nameplateChannelSizeFactor: 0.032,
   nameplateEpisodeSizeFactor: 0.025,
   // fitText may shrink the hook down to this fraction before wrapping.

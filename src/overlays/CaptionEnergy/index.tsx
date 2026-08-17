@@ -5,8 +5,15 @@ import {
   captionBottomOffsetAboveProgressPx,
   getProgressBarGeometry,
 } from "../ProgressBar/math";
-import type { OverlayPosition, OverlayTextZone, OverlayWindow } from "../types";
+import {
+  DEFAULT_SAFE_AREA,
+  type OverlayPosition,
+  type OverlaySafeArea,
+  type OverlayTextZone,
+  type OverlayWindow,
+} from "../types";
 import { captionEnergyConfig, type CaptionEnergyConfig } from "./config";
+import { captionCardWidthPx } from "./math";
 import {
   hookBgPalettes,
   type HookBgPalette,
@@ -34,20 +41,28 @@ const captionTarget = ({
   height,
   position,
   textZone,
+  safeArea,
   lineCount,
 }: {
   width: number;
   height: number;
   position: OverlayPosition;
   textZone?: OverlayTextZone | null;
-  lineCount: 1 | 2;
+  safeArea: OverlaySafeArea;
+  lineCount: number;
 }): Point => {
   // Production captions live above ProgressBar. For a director-defined top
   // zone, honour that geometry instead of forcing a bottom placement.
-  if (lineCount === 2 && position === "top" && textZone) {
+  if (position === "top" && textZone) {
     return {
       x: width * ((textZone.xPct + textZone.wPct / 2) / 100),
       y: height * ((textZone.yPct + textZone.hPct * 0.78) / 100),
+    };
+  }
+  if (position === "top") {
+    return {
+      x: width / 2,
+      y: height * (safeArea.topPct / 100),
     };
   }
   return {
@@ -60,7 +75,8 @@ export type CaptionEnergyBridgeProps = {
   window: OverlayWindow;
   position: OverlayPosition;
   textZone?: OverlayTextZone | null;
-  lineCount: 1 | 2;
+  safeArea?: OverlaySafeArea;
+  lineCount: number;
   reduced?: boolean;
   config?: Partial<CaptionEnergyConfig>;
   theme?: HookBgTheme;
@@ -72,6 +88,7 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
   window,
   position,
   textZone,
+  safeArea = DEFAULT_SAFE_AREA,
   lineCount,
   reduced,
   config: overrides,
@@ -81,9 +98,16 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
   const { fps, width, height } = useVideoConfig();
   const config = { ...captionEnergyConfig, ...overrides };
   const themePalette =
-    hookBgPalettes[theme ?? hookConfig.background.themeOverride ?? hookConfig.background.defaultTheme];
+    hookBgPalettes[
+      theme ??
+        hookConfig.background.themeOverride ??
+        hookConfig.background.defaultTheme
+    ];
   const local = frame - window.startFrame;
-  const end = atFps(config.ignitionFrames + config.travelFrames + config.revealFrames, fps);
+  const end = atFps(
+    config.ignitionFrames + config.travelFrames + config.revealFrames,
+    fps,
+  );
   const exitFrames = atFps(config.exitFrames, fps);
   const exitStart = window.endFrame - exitFrames;
   const inEntry = local >= 0 && local <= end;
@@ -92,9 +116,20 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
   if (!config.enabled || reduced || (!inEntry && !inExit)) return null;
 
   const px = width / 1080;
-  const sourceGeo = getProgressBarGeometry({ width, height, config: progressBarConfig });
+  const sourceGeo = getProgressBarGeometry({
+    width,
+    height,
+    config: progressBarConfig,
+  });
   const source: Point = { x: sourceGeo.centerX, y: sourceGeo.centerY };
-  const target = captionTarget({ width, height, position, textZone, lineCount });
+  const target = captionTarget({
+    width,
+    height,
+    position,
+    textZone,
+    safeArea,
+    lineCount,
+  });
   const ignitionEnd = atFps(config.ignitionFrames, fps);
   const travelEnd = ignitionEnd + atFps(config.travelFrames, fps);
   const entryTravel = interpolate(local, [ignitionEnd, travelEnd], [0, 1], {
@@ -113,16 +148,19 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
     extrapolateRight: "clamp",
     easing: Easing.out(Easing.quad),
   });
-  const entryPulse = interpolate(local, [0, ignitionEnd, travelEnd], [0, 1, 0], {
+  const entryPulse = interpolate(
+    local,
+    [0, ignitionEnd, travelEnd],
+    [0, 1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
+  const exitPulse = interpolate(exitTravel, [0, 0.72, 1], [0, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const exitPulse = interpolate(
-    exitTravel,
-    [0, 0.72, 1],
-    [0, 1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
   const pulse = inExit ? exitPulse : entryPulse;
   const beamOpacity = inExit
     ? Math.sin(exitTravel * Math.PI) * config.beamOpacity * 0.72
@@ -136,14 +174,33 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
   const beamEnd = inExit ? source : target;
   const u = 1 - travel;
   const head: Point = {
-    x: u * u * beamStart.x + 2 * u * travel * control.x + travel * travel * beamEnd.x,
-    y: u * u * beamStart.y + 2 * u * travel * control.y + travel * travel * beamEnd.y,
+    x:
+      u * u * beamStart.x +
+      2 * u * travel * control.x +
+      travel * travel * beamEnd.x,
+    y:
+      u * u * beamStart.y +
+      2 * u * travel * control.y +
+      travel * travel * beamEnd.y,
   };
   const d = `M ${beamStart.x} ${beamStart.y} Q ${control.x} ${control.y} ${beamEnd.x} ${beamEnd.y}`;
 
   return (
-    <div aria-hidden style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ position: "absolute", inset: 0 }}>
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        pointerEvents: "none",
+      }}
+    >
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ position: "absolute", inset: 0 }}
+      >
         <path
           d={d}
           pathLength={1}
@@ -153,7 +210,10 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
           strokeLinecap="round"
           strokeDasharray={`${travel} ${Math.max(0.001, 1 - travel)}`}
           opacity={beamOpacity * 0.34}
-          style={{ filter: `blur(${(7 * px).toFixed(1)}px)`, mixBlendMode: "screen" }}
+          style={{
+            filter: `blur(${(7 * px).toFixed(1)}px)`,
+            mixBlendMode: "screen",
+          }}
         />
         <path
           d={d}
@@ -164,59 +224,77 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
           strokeLinecap="round"
           strokeDasharray={`${travel} ${Math.max(0.001, 1 - travel)}`}
           opacity={beamOpacity}
-          style={{ filter: `drop-shadow(0 0 ${7 * px}px ${themePalette.highlight})`, mixBlendMode: "screen" }}
+          style={{
+            filter: `drop-shadow(0 0 ${7 * px}px ${themePalette.highlight})`,
+            mixBlendMode: "screen",
+          }}
         />
       </svg>
 
-      {!inExit ? <div style={{
-        position: "absolute",
-        left: source.x,
-        top: source.y,
-        width: config.sourcePulseRadiusPx * px * 2,
-        height: config.sourcePulseRadiusPx * px * 2,
-        transform: "translate(-50%, -50%)",
-        borderRadius: "50%",
-        opacity: pulse * config.sourcePulseOpacity,
-        background: `radial-gradient(circle, transparent 42%, ${themePalette.highlight} 50%, transparent 72%)`,
-        mixBlendMode: "screen",
-      }} /> : null}
+      {!inExit ? (
+        <div
+          style={{
+            position: "absolute",
+            left: source.x,
+            top: source.y,
+            width: config.sourcePulseRadiusPx * px * 2,
+            height: config.sourcePulseRadiusPx * px * 2,
+            transform: "translate(-50%, -50%)",
+            borderRadius: "50%",
+            opacity: pulse * config.sourcePulseOpacity,
+            background: `radial-gradient(circle, transparent 42%, ${themePalette.highlight} 50%, transparent 72%)`,
+            mixBlendMode: "screen",
+          }}
+        />
+      ) : null}
 
-      {travel > 0.002 && travel < 0.998 ? <div style={{
-        position: "absolute",
-        left: head.x,
-        top: head.y,
-        width: config.headRadiusPx * px * 2,
-        height: config.headRadiusPx * px * 2,
-        transform: "translate(-50%, -50%)",
-        borderRadius: "50%",
-        background: themePalette.highlight,
-        boxShadow: `0 0 ${14 * px}px ${6 * px}px ${themePalette.primary}`,
-        opacity: beamOpacity,
-        mixBlendMode: "screen",
-      }} /> : null}
+      {travel > 0.002 && travel < 0.998 ? (
+        <div
+          style={{
+            position: "absolute",
+            left: head.x,
+            top: head.y,
+            width: config.headRadiusPx * px * 2,
+            height: config.headRadiusPx * px * 2,
+            transform: "translate(-50%, -50%)",
+            borderRadius: "50%",
+            background: themePalette.highlight,
+            boxShadow: `0 0 ${14 * px}px ${6 * px}px ${themePalette.primary}`,
+            opacity: beamOpacity,
+            mixBlendMode: "screen",
+          }}
+        />
+      ) : null}
 
-      <div style={{
-        position: "absolute",
-        left: target.x,
-        top: target.y,
-        width: config.impactRadiusPx * px * 2,
-        height: config.impactRadiusPx * px * 2,
-        transform: `translate(-50%, -50%) scale(${(0.3 + arrival * 0.7).toFixed(3)})`,
-        borderRadius: "50%",
-        opacity: arrival * (1 - Math.max(0, arrival - 0.72) / 0.28) * config.impactOpacity,
-        background: `radial-gradient(circle, ${themePalette.highlight} 0%, ${themePalette.primary} 22%, transparent 72%)`,
-        filter: `blur(${4 * px}px)`,
-        mixBlendMode: "screen",
-      }} />
+      <div
+        style={{
+          position: "absolute",
+          left: target.x,
+          top: target.y,
+          width: config.impactRadiusPx * px * 2,
+          height: config.impactRadiusPx * px * 2,
+          transform: `translate(-50%, -50%) scale(${(0.3 + arrival * 0.7).toFixed(3)})`,
+          borderRadius: "50%",
+          opacity:
+            arrival *
+            (1 - Math.max(0, arrival - 0.72) / 0.28) *
+            config.impactOpacity,
+          background: `radial-gradient(circle, ${themePalette.highlight} 0%, ${themePalette.primary} 22%, transparent 72%)`,
+          filter: `blur(${4 * px}px)`,
+          mixBlendMode: "screen",
+        }}
+      />
     </div>
   );
 };
 
 export type CaptionEnergySurfaceProps = {
   window: OverlayWindow;
-  lineCount: 1 | 2;
+  // 1, 2 or 3 rendered lines — CaptionLong may re-flow to a third.
+  lineCount: number;
   position: OverlayPosition;
   textZone?: OverlayTextZone | null;
+  safeArea?: OverlaySafeArea;
   reduced?: boolean;
   children: React.ReactNode;
   config?: Partial<CaptionEnergyConfig>;
@@ -230,6 +308,7 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
   lineCount,
   position,
   textZone,
+  safeArea = DEFAULT_SAFE_AREA,
   reduced,
   children,
   config: overrides,
@@ -239,10 +318,16 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
   const { fps, width, height } = useVideoConfig();
   const config = { ...captionEnergyConfig, ...overrides };
   const themePalette: HookBgPalette =
-    hookBgPalettes[theme ?? hookConfig.background.themeOverride ?? hookConfig.background.defaultTheme];
+    hookBgPalettes[
+      theme ??
+        hookConfig.background.themeOverride ??
+        hookConfig.background.defaultTheme
+    ];
   const px = width / 1080;
   const local = frame - window.startFrame;
-  const revealStart = reduced ? 0 : atFps(config.ignitionFrames + config.travelFrames - 3, fps);
+  const revealStart = reduced
+    ? 0
+    : atFps(config.ignitionFrames + config.travelFrames - 3, fps);
   const revealEnd = revealStart + atFps(config.revealFrames, fps);
   const reveal = interpolate(local, [revealStart, revealEnd], [0, 1], {
     extrapolateLeft: "clamp",
@@ -253,30 +338,66 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
     frame,
     [window.endFrame - atFps(config.exitFrames, fps), window.endFrame],
     [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.in(Easing.quad) },
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.quad),
+    },
   );
-  const source = getProgressBarGeometry({ width, height, config: progressBarConfig });
-  const target = captionTarget({ width, height, position, textZone, lineCount });
+  const source = getProgressBarGeometry({
+    width,
+    height,
+    config: progressBarConfig,
+  });
+  const target = captionTarget({
+    width,
+    height,
+    position,
+    textZone,
+    safeArea,
+    lineCount,
+  });
+  const launchStart = Math.max(0, revealStart - atFps(2, fps));
+  // Transform progress carries a small overshoot so the card SETTLES instead
+  // of stopping dead; opacity rides a plain ease-out (it must never exceed 1).
   const launch = interpolate(
     local,
-    [Math.max(0, revealStart - atFps(2, fps)), revealEnd],
+    [launchStart, revealEnd + atFps(4, fps)],
     [0, 1],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
+      easing: Easing.bezier(0.17, 1.03, 0.29, 1),
     },
   );
-  // On entry the whole readable object expands out of the Wazin circle. On
-  // exit the exact vector is reversed, so it is visibly reabsorbed by it.
-  const travel = reduced ? 1 : launch * (1 - exit);
-  const translateX = (source.centerX - target.x) * (1 - travel);
-  const translateY = (source.centerY - target.y) * (1 - travel);
-  const scale = config.launchScaleFrom + (1 - config.launchScaleFrom) * travel;
+  const fadeIn = interpolate(local, [launchStart, revealEnd], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
+  });
+  // The card emerges along the Wazin circle → caption vector and sinks back
+  // toward it on exit — but only a fraction of the way, so the move reads as
+  // a considered arrival rather than an object flying across the frame.
+  const enter = reduced ? 1 : launch;
+  const leave = reduced ? exit : exit;
+  const offset =
+    (1 - enter) * config.launchTravelFraction +
+    leave * config.exitTravelFraction;
+  const translateX = (source.centerX - target.x) * offset;
+  const translateY = (source.centerY - target.y) * offset;
+  const scaleIn = config.launchScaleFrom + (1 - config.launchScaleFrom) * enter;
+  const scale = scaleIn * (1 - leave * (1 - config.exitScaleTo));
   const contentOpacity = reduced
     ? 1 - exit
-    : config.launchOpacityFrom + (1 - config.launchOpacityFrom) * launch;
-  const radius = lineCount === 1 ? config.oneLineRadiusPx : config.twoLineRadiusPx;
+    : Math.min(
+        1,
+        config.launchOpacityFrom + (1 - config.launchOpacityFrom) * fadeIn,
+      );
+  const surfaceBlur = reduced
+    ? 0
+    : config.launchBlurPx * px * (1 - fadeIn + leave * 0.5);
+  const radius =
+    lineCount <= 1 ? config.oneLineRadiusPx : config.twoLineRadiusPx;
   const revealRadius = 18 + reveal * 142;
   const mask = `radial-gradient(circle at 50% 100%, black 0%, black ${Math.max(0, revealRadius - 18)}%, transparent ${revealRadius}%)`;
   const accentReveal = interpolate(
@@ -302,96 +423,140 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
   const sheenOpacity =
     Math.sin(sheen * Math.PI) * config.sheenOpacity * reveal * (1 - exit);
   const surfacePaddingBlock =
-    config.surfacePaddingBlockPx * px * (lineCount === 1 ? 1 : 1.12);
+    config.surfacePaddingBlockPx * px * (lineCount <= 1 ? 1 : 1.1);
+  const cardWidth = captionCardWidthPx({
+    width,
+    safeArea,
+    textZone,
+    safeGapPx: config.surfaceSafeGapPx,
+  });
 
   return (
-    <div style={{
-      position: "relative",
-      padding: `${surfacePaddingBlock}px ${config.surfacePaddingInlinePx * px}px`,
-      isolation: "isolate",
-      transformOrigin: "center bottom",
-      transform: `translate(${translateX.toFixed(2)}px, ${translateY.toFixed(2)}px) scale(${scale.toFixed(4)})`,
-      opacity: contentOpacity * (1 - exit * 0.86),
-      filter: reduced ? undefined : `blur(${((1 - travel) * 3.5 * px).toFixed(2)}px)`,
-    }}>
-      <div aria-hidden style={{
-        position: "absolute",
-        inset: `${-10 * px}px ${-16 * px}px`,
-        zIndex: -3,
-        borderRadius: (radius + 14) * px,
-        opacity: reveal * (1 - exit) * 0.3,
-        background: `radial-gradient(ellipse 38% 76% at 92% 48%, color-mix(in oklch, ${themePalette.highlight} 34%, transparent), transparent 76%)`,
-        filter: `blur(${22 * px}px)`,
-        mixBlendMode: "screen",
-      }} />
-      <div aria-hidden style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: -1,
-        borderRadius: radius * px,
-        overflow: "hidden",
-        opacity: config.surfaceOpacity * reveal * (1 - exit),
-        background: `
-          linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.025) 49.5%, transparent 50.5%),
-          radial-gradient(ellipse 44% 150% at 100% 48%, color-mix(in oklch, ${themePalette.primary} 34%, transparent) 0%, transparent 70%),
-          radial-gradient(ellipse 78% 150% at 5% -12%, color-mix(in oklch, ${themePalette.secondary} 18%, transparent) 0%, transparent 66%),
-          linear-gradient(112deg, rgba(4,7,14,0.94) 0%, color-mix(in oklch, ${themePalette.vignette} 92%, #080b12) 58%, color-mix(in oklch, ${themePalette.base} 78%, #0a0c13) 100%)`,
-        border: `${Math.max(1, px)}px solid color-mix(in oklch, ${themePalette.highlight} 26%, rgba(255,255,255,0.12))`,
-        boxShadow: `0 ${14 * px}px ${42 * px}px rgba(0,0,0,0.56), 0 ${3 * px}px ${8 * px}px rgba(0,0,0,0.3), inset 0 ${1 * px}px 0 rgba(255,255,255,0.13), inset 0 ${-1 * px}px 0 rgba(0,0,0,0.48), 0 0 ${22 * px}px color-mix(in oklch, ${themePalette.primary} 12%, transparent)`,
-        WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
-        backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
-        WebkitMaskImage: mask,
-        maskImage: mask,
-      }}>
-        <div style={{
+    <div
+      style={{
+        position: "relative",
+        boxSizing: "border-box",
+        // One fixed plate length for every caption in the reel — the text
+        // centres inside it instead of the box shrinking onto the text.
+        width: cardWidth,
+        padding: `${surfacePaddingBlock}px ${config.surfacePaddingInlinePx * px}px`,
+        isolation: "isolate",
+        transformOrigin: "center bottom",
+        transform: `translate(${translateX.toFixed(2)}px, ${translateY.toFixed(2)}px) scale(${scale.toFixed(4)})`,
+        opacity: contentOpacity * (1 - exit * 0.94),
+        filter:
+          surfaceBlur > 0.05 ? `blur(${surfaceBlur.toFixed(2)}px)` : undefined,
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
           position: "absolute",
-          insetInline: 20 * px,
-          top: 0,
-          height: Math.max(1, 1.25 * px),
-          opacity: 0.62,
-          background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.28) 34%, color-mix(in oklch, ${themePalette.highlight} 42%, white) 74%, transparent)`,
-          filter: `blur(${0.35 * px}px)`,
-        }} />
-        <div style={{
+          // The glow spreads into the safe gap, never across it.
+          inset: `${-12 * px}px ${-Math.min(16, config.surfaceSafeGapPx) * px}px`,
+          zIndex: -3,
+          borderRadius: (radius + 14) * px,
+          opacity: reveal * (1 - exit) * 0.34,
+          background: `radial-gradient(ellipse 42% 78% at 92% 48%, color-mix(in oklch, ${themePalette.highlight} 38%, transparent), transparent 76%), radial-gradient(ellipse 46% 80% at 8% 52%, color-mix(in oklch, ${themePalette.primary} 40%, transparent), transparent 78%)`,
+          filter: `blur(${22 * px}px)`,
+          mixBlendMode: "screen",
+        }}
+      />
+      <div
+        aria-hidden
+        style={{
           position: "absolute",
           inset: 0,
-          opacity: 0.055,
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.22) ${Math.max(0.5, 0.7 * px)}px, transparent ${Math.max(0.5, 0.7 * px)}px)`,
-          backgroundSize: `100% ${6 * px}px`,
-          mixBlendMode: "soft-light",
-        }} />
-        <div style={{
+          zIndex: -1,
+          borderRadius: radius * px,
+          overflow: "hidden",
+          opacity: config.surfaceOpacity * reveal * (1 - exit),
+          // The template palette IS the caption's colour: a primary field on
+          // the reading side, a secondary wash opposite it, over the theme's
+          // own vignette/base. Only the ink stays neutral.
+          background: `
+          radial-gradient(ellipse 56% 150% at 100% 46%, color-mix(in oklch, ${themePalette.primary} 56%, transparent) 0%, transparent 74%),
+          radial-gradient(ellipse 82% 150% at 0% -12%, color-mix(in oklch, ${themePalette.secondary} 34%, transparent) 0%, transparent 70%),
+          linear-gradient(112deg, color-mix(in oklch, ${themePalette.base} 72%, rgba(4,7,14,0.94)) 0%, color-mix(in oklch, ${themePalette.vignette} 84%, ${themePalette.base}) 54%, color-mix(in oklch, ${themePalette.base} 88%, #0a0c13) 100%)`,
+          border: `${Math.max(1, 1.25 * px)}px solid color-mix(in oklch, ${themePalette.highlight} 32%, rgba(255,255,255,0.12))`,
+          boxShadow: `0 ${14 * px}px ${42 * px}px rgba(0,0,0,0.56), 0 ${3 * px}px ${8 * px}px rgba(0,0,0,0.3), inset 0 ${1 * px}px 0 rgba(255,255,255,0.13), inset 0 ${-1 * px}px 0 rgba(0,0,0,0.48), 0 0 ${22 * px}px color-mix(in oklch, ${themePalette.primary} 12%, transparent)`,
+          WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
+          backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
+          WebkitMaskImage: mask,
+          maskImage: mask,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            insetInline: 20 * px,
+            top: 0,
+            height: Math.max(1, 1.25 * px),
+            opacity: 0.62,
+            background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.28) 34%, color-mix(in oklch, ${themePalette.highlight} 42%, white) 74%, transparent)`,
+            filter: `blur(${0.35 * px}px)`,
+          }}
+        />
+        {/* Matching bottom edge in the theme's own primary — the card reads
+            as a machined object rather than a translucent panel. */}
+        <div
+          style={{
+            position: "absolute",
+            insetInline: 26 * px,
+            bottom: 0,
+            height: Math.max(1, 1.25 * px),
+            opacity: 0.45 * accentReveal,
+            background: `linear-gradient(90deg, transparent, color-mix(in oklch, ${themePalette.primary} 78%, white) 30%, color-mix(in oklch, ${themePalette.highlight} 60%, transparent) 78%, transparent)`,
+            filter: `blur(${0.4 * px}px)`,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0.055,
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.22) ${Math.max(0.5, 0.7 * px)}px, transparent ${Math.max(0.5, 0.7 * px)}px)`,
+            backgroundSize: `100% ${6 * px}px`,
+            mixBlendMode: "soft-light",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: "-22%",
+            bottom: "-22%",
+            left: `${100 - sheen * (100 + config.sheenWidthPct)}%`,
+            width: `${config.sheenWidthPct}%`,
+            opacity: sheenOpacity,
+            transform: "skewX(-14deg)",
+            background: `linear-gradient(90deg, transparent, color-mix(in oklch, ${themePalette.highlight} 72%, white), transparent)`,
+            filter: `blur(${7 * px}px)`,
+            mixBlendMode: "screen",
+          }}
+        />
+      </div>
+
+      <div
+        aria-hidden
+        style={{
           position: "absolute",
-          top: "-22%",
-          bottom: "-22%",
-          left: `${100 - sheen * (100 + config.sheenWidthPct)}%`,
-          width: `${config.sheenWidthPct}%`,
-          opacity: sheenOpacity,
-          transform: "skewX(-14deg)",
-          background: `linear-gradient(90deg, transparent, color-mix(in oklch, ${themePalette.highlight} 72%, white), transparent)`,
-          filter: `blur(${7 * px}px)`,
-          mixBlendMode: "screen",
-        }} />
-      </div>
+          zIndex: 2,
+          insetInlineStart: config.edgeAccentInsetPx * px,
+          // Grows with the block so a three-line card keeps the same optical
+          // proportion between rail and text.
+          top: lineCount <= 1 ? "30%" : lineCount === 2 ? "24%" : "20%",
+          width: config.edgeAccentWidthPx * px,
+          height: lineCount <= 1 ? "40%" : lineCount === 2 ? "52%" : "60%",
+          borderRadius: 999,
+          opacity: accentReveal * config.edgeAccentOpacity * (1 - exit),
+          transform: `scaleY(${accentReveal.toFixed(4)})`,
+          transformOrigin: "center",
+          background: `linear-gradient(180deg, ${themePalette.highlight}, ${themePalette.primary})`,
+          boxShadow: `0 0 ${10 * px}px color-mix(in oklch, ${themePalette.highlight} 62%, transparent)`,
+        }}
+      />
 
-      <div aria-hidden style={{
-        position: "absolute",
-        zIndex: 2,
-        insetInlineStart: config.edgeAccentInsetPx * px,
-        top: lineCount === 1 ? "31%" : "25%",
-        width: config.edgeAccentWidthPx * px,
-        height: lineCount === 1 ? "38%" : "50%",
-        borderRadius: 999,
-        opacity: accentReveal * config.edgeAccentOpacity * (1 - exit),
-        transform: `scaleY(${accentReveal.toFixed(4)})`,
-        transformOrigin: "center",
-        background: `linear-gradient(180deg, ${themePalette.highlight}, ${themePalette.primary})`,
-        boxShadow: `0 0 ${10 * px}px color-mix(in oklch, ${themePalette.highlight} 62%, transparent)`,
-      }} />
-
-      <div style={{ position: "relative", zIndex: 1 }}>
-        {children}
-      </div>
+      <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
     </div>
   );
 };

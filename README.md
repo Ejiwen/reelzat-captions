@@ -65,11 +65,22 @@ public/reels/
 - Authored display windows are **clip-relative seconds** (floats). They are
   converted to frames in exactly one place: `src/ingest/resolve.ts`
   (`secondsToFrames`, `Math.floor` — 26.72 s @ 30 fps → 801 frames).
+- Authored captions accept `short_1line`, `long_2lines`, and `regular`.
+  `regular` may carry `words[]`, where each word has `text` plus second-based
+  `in_reel` and `in_source` windows. Only `in_reel` drives rendering and is
+  resolved once to `{startFrame, endFrame}`. `verse: true` fixes every authored
+  line as one centred hemistich; `emphasis: [word, …]` highlights up to two
+  exact normalized word tokens on any authored caption type.
 - Everything is zod-validated defensively (`src/ingest/schemas.ts`); a broken
   package fails with **one report listing every problem**, same style as the
   legacy captions validator. Upstream guarantees that are still re-checked:
-  ≤2 captions per reel, promo has zero captions, same-position elements never
-  overlap in time, windows sit inside the clip.
+  promo has zero captions, same-position elements never overlap in time, and
+  windows sit inside the clip.
+- Every authored caption resolves to the **bottom caption band**
+  (`CAPTION_BAND_POSITION`), whatever `authoring.json` says: one-line and
+  two-line captions share one reading position, directly above the ProgressBar
+  ring. The overlap check uses that effective position, so two captions may
+  never share time even if they were authored at opposite ends of the frame.
 - Media metadata (width/height/fps/duration) comes **from the sidecar, never
   from probing the video** — batch renders must not re-parse every file.
 
@@ -91,8 +102,10 @@ under **Components/** in Studio so it can be previewed and tuned in isolation.
 | `Hook/` | The opening statement — largest type, gold word cascade in/out, one shimmer pass, accent underline. Reads within its first 3 words. Placement/size/hold live in `Hook/config.ts`. |
 | `HookBg/` | Solid-gradient motion background behind the hook: five editorial themes (`politics`, `religion`, `culture`, `general`, `social`), layered colour fields + one entrance light sweep, exit synced to the hook. Theme via Studio prop, per-reel `hook.backgroundTheme`, or keyword fallback. |
 | `HookEnergyBridge/` | The brand connection: the Wazin circle emits one restrained themed pulse, a soft light field travels a bowed path and resolves into the HookBg; a quieter return pulse plays on exit. Shares the ProgressBar's exact geometry; invisible during the reading hold. |
-| `CaptionShort/` | One big authored line, auto-fit, never wrapped. Word-stagger entrance. |
-| `CaptionLong/` | Exactly two balanced lines, one font size for both, flat word-stagger across the break. |
+| `CaptionShort/` | One big authored line, fitted from measured word widths, never wrapped. Word-stagger entrance. |
+| `CaptionLong/` | Two balanced lines at one shared font size, flat word-stagger across the break; re-balances (to three lines if that buys bigger type) when the authored break would shrink the block too far. |
+| `CaptionRegular/` | Verbatim authored prose with optional frame-timed karaoke words and emphasis; `verse: true` preserves every authored hemistich without reflow. |
+| `CaptionEnergy/` | The shared caption card — themed glass surface, edge rail, sheen — plus the short beam that carries it out of the Wazin ring and back. Both caption types render into it, in the same place. |
 | `Nameplate/` | Channel + episode title chip in the safe-area corner. Enters as the hook exits; yields (fades out) while a caption shares its band. |
 | `ProgressBar/` | Centered circular RTL/LTR progress ring with the Wazin logo, aligned to the bottom Facebook 4:5 safe-region boundary. |
 | `SafeArea/` | Debug guides: safe-area bands, director text/face zones, per-overlay window timeline. |
@@ -185,6 +198,7 @@ src/
   generated/reels-manifest.json  # written by scripts/discover-reels.ts
   motion/                  # animation registry: presets + timing + merge
   overlays/                # folder-per-component: Hook, CaptionShort, CaptionLong,
+                           #   CaptionRegular,
                            #   Nameplate, SafeArea (+ shared OverlayRoot, wordStagger)
   compositions/            # AuthoredReel, AsrCaptioned (+ scrim, ASR subtitles)
   CaptionedVideo.tsx       # legacy standalone burner

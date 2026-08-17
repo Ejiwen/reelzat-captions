@@ -1,11 +1,23 @@
 import { parseMedia } from "@remotion/media-parser";
 import React from "react";
-import { Composition, Folder, staticFile, type CalculateMetadataFunction } from "remotion";
+import {
+  Composition,
+  Folder,
+  staticFile,
+  type CalculateMetadataFunction,
+} from "remotion";
 import { CaptionedVideo } from "./CaptionedVideo";
 import { AsrCaptioned } from "./compositions/AsrCaptioned";
 import { AuthoredReel } from "./compositions/AuthoredReel";
 import type { ReelsManifest } from "./ingest/manifest";
-import { CaptionLongDemo } from "./overlays/CaptionLong/demo";
+import {
+  CaptionLongDemo,
+  CaptionLongReflowDemo,
+} from "./overlays/CaptionLong/demo";
+import {
+  CaptionRegularDemo,
+  CaptionRegularVerseDemo,
+} from "./overlays/CaptionRegular/demo";
 import { CaptionShortDemo } from "./overlays/CaptionShort/demo";
 import { HookDemo } from "./overlays/Hook/demo";
 import {
@@ -33,7 +45,11 @@ import {
   defaultAsrCaptionedProps,
   defaultAuthoredReelProps,
 } from "./schema/reelProps";
-import { compositionProps, defaultProps, type CompositionProps } from "./schema/props";
+import {
+  compositionProps,
+  defaultProps,
+  type CompositionProps,
+} from "./schema/props";
 import manifestJson from "./generated/reels-manifest.json";
 
 const FPS = 30;
@@ -44,9 +60,9 @@ const FPS = 30;
 const manifest = manifestJson as ReelsManifest;
 
 // Legacy path only: dimensions and duration come from the source video.
-const calculateLegacyMetadata: CalculateMetadataFunction<CompositionProps> = async ({
-  props,
-}) => {
+const calculateLegacyMetadata: CalculateMetadataFunction<
+  CompositionProps
+> = async ({ props }) => {
   const { slowDurationInSeconds, dimensions } = await parseMedia({
     src: staticFile(props.videoSrc),
     fields: { slowDurationInSeconds: true, dimensions: true },
@@ -62,7 +78,12 @@ const calculateLegacyMetadata: CalculateMetadataFunction<CompositionProps> = asy
   };
 };
 
-const DEMO = { durationInFrames: 180, fps: 30, width: 1080, height: 1920 } as const;
+const DEMO = {
+  durationInFrames: 180,
+  fps: 30,
+  width: 1080,
+  height: 1920,
+} as const;
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -82,7 +103,9 @@ export const RemotionRoot: React.FC = () => {
               }}
               durationInFrames={
                 reel.durationInFrames +
-                (outroConfig.enabled ? Math.round(outroConfig.durationSeconds * reel.fps) : 0)
+                (outroConfig.enabled
+                  ? Math.round(outroConfig.durationSeconds * reel.fps)
+                  : 0)
               }
               width={reel.width}
               height={reel.height}
@@ -101,7 +124,9 @@ export const RemotionRoot: React.FC = () => {
               }}
               durationInFrames={
                 reel.durationInFrames +
-                (outroConfig.enabled ? Math.round(outroConfig.durationSeconds * reel.fps) : 0)
+                (outroConfig.enabled
+                  ? Math.round(outroConfig.durationSeconds * reel.fps)
+                  : 0)
               }
               width={reel.width}
               height={reel.height}
@@ -113,21 +138,92 @@ export const RemotionRoot: React.FC = () => {
 
       <Folder name="Components">
         <Composition id="Hook-Demo" component={HookDemo} {...DEMO} />
-        <Composition id="HookBg-Politics" component={HookBgPoliticsDemo} {...DEMO} />
-        <Composition id="HookBg-Religion" component={HookBgReligionDemo} {...DEMO} />
-        <Composition id="HookBg-Culture" component={HookBgCultureDemo} {...DEMO} />
-        <Composition id="HookBg-General" component={HookBgGeneralDemo} {...DEMO} />
-        <Composition id="HookBg-Social" component={HookBgSocialDemo} {...DEMO} />
-        <Composition id="HookEnergyBridge-Demo" component={HookEnergyGeneralDemo} {...DEMO} />
-        <Composition id="HookEnergy-Politics" component={HookEnergyPoliticsDemo} {...DEMO} />
-        <Composition id="HookEnergy-Religion" component={HookEnergyReligionDemo} {...DEMO} />
-        <Composition id="HookEnergy-Culture" component={HookEnergyCultureDemo} {...DEMO} />
-        <Composition id="HookEnergy-General" component={HookEnergyGeneralDemo} {...DEMO} />
-        <Composition id="HookEnergy-Social" component={HookEnergySocialDemo} {...DEMO} />
-        <Composition id="CaptionShort-Demo" component={CaptionShortDemo} {...DEMO} />
-        <Composition id="CaptionLong-Demo" component={CaptionLongDemo} {...DEMO} />
+        <Composition
+          id="HookBg-Politics"
+          component={HookBgPoliticsDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookBg-Religion"
+          component={HookBgReligionDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookBg-Culture"
+          component={HookBgCultureDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookBg-General"
+          component={HookBgGeneralDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookBg-Social"
+          component={HookBgSocialDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookEnergyBridge-Demo"
+          component={HookEnergyGeneralDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookEnergy-Politics"
+          component={HookEnergyPoliticsDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookEnergy-Religion"
+          component={HookEnergyReligionDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookEnergy-Culture"
+          component={HookEnergyCultureDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookEnergy-General"
+          component={HookEnergyGeneralDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="HookEnergy-Social"
+          component={HookEnergySocialDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="CaptionShort-Demo"
+          component={CaptionShortDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="CaptionLong-Demo"
+          component={CaptionLongDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="CaptionLong-Reflow"
+          component={CaptionLongReflowDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="CaptionRegular-Demo"
+          component={CaptionRegularDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="CaptionRegular-Verse"
+          component={CaptionRegularVerseDemo}
+          {...DEMO}
+        />
         <Composition id="Nameplate-Demo" component={NameplateDemo} {...DEMO} />
-        <Composition id="ProgressBar-Demo" component={ProgressBarDemo} {...DEMO} />
+        <Composition
+          id="ProgressBar-Demo"
+          component={ProgressBarDemo}
+          {...DEMO}
+        />
         <Composition id="Outro-Demo" component={OutroDemo} {...DEMO} />
         <Composition id="SafeArea-Demo" component={SafeAreaDemo} {...DEMO} />
       </Folder>

@@ -15,7 +15,7 @@
     "prerender:batch": "npm run discover",
     "render:batch": "tsx scripts/render-batch.ts",
     "preview": "remotion render Captioned out/preview.mp4 --frames=0-150",
-    "test": "node --import tsx --test tests/ingest.test.ts tests/hookbg-theme.test.ts tests/energy-bridge.test.ts tests/video-intro.test.ts tests/mid-reel-cta.test.ts tests/sound-identity.test.ts",
+    "test": "node --import tsx --test tests/ingest.test.ts tests/hookbg-theme.test.ts tests/energy-bridge.test.ts tests/caption-layout.test.ts tests/video-intro.test.ts tests/mid-reel-cta.test.ts tests/sound-identity.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

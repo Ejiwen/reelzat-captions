@@ -3,16 +3,30 @@ import { z } from "zod";
 // All timings are integer milliseconds. Never floats, never seconds.
 export const wordTimingSchema = z.object({
   text: z.string().min(1, "word text must not be empty"),
-  startMs: z.number().int("startMs must be an integer (milliseconds)").nonnegative(),
-  endMs: z.number().int("endMs must be an integer (milliseconds)").nonnegative(),
+  startMs: z
+    .number()
+    .int("startMs must be an integer (milliseconds)")
+    .nonnegative(),
+  endMs: z
+    .number()
+    .int("endMs must be an integer (milliseconds)")
+    .nonnegative(),
 });
 
 export const segmentSchema = z.object({
   id: z.string().min(1, "segment id must not be empty"),
-  startMs: z.number().int("startMs must be an integer (milliseconds)").nonnegative(),
-  endMs: z.number().int("endMs must be an integer (milliseconds)").nonnegative(),
+  startMs: z
+    .number()
+    .int("startMs must be an integer (milliseconds)")
+    .nonnegative(),
+  endMs: z
+    .number()
+    .int("endMs must be an integer (milliseconds)")
+    .nonnegative(),
   text: z.string().min(1, "text must not be empty"),
-  words: z.array(wordTimingSchema).min(1, "segment must contain at least one word"),
+  words: z
+    .array(wordTimingSchema)
+    .min(1, "segment must contain at least one word"),
   emphasis: z.array(z.number().int().nonnegative()).optional(),
 });
 
@@ -20,7 +34,9 @@ export const captionFileSchema = z.object({
   version: z.literal(1),
   language: z.string().min(1),
   source: z.string().optional(),
-  segments: z.array(segmentSchema).min(1, "captions file must contain at least one segment"),
+  segments: z
+    .array(segmentSchema)
+    .min(1, "captions file must contain at least one segment"),
 });
 
 export type WordTiming = z.infer<typeof wordTimingSchema>;
@@ -39,7 +55,7 @@ export type ResolvedCaptions = {
   segments: ResolvedSegment[];
 };
 
-const collapseWhitespace = (s: string) => s.replace(/\s+/g, " ").trim();
+export const collapseWhitespace = (s: string) => s.replace(/\s+/g, " ").trim();
 
 // Tokenize one authored line of `text` using Intl.Segmenter — never split(" ").
 // Punctuation (non word-like segments) is merged into the preceding token so
@@ -66,13 +82,18 @@ export const tokenizeLine = (line: string): string[] => {
 // warn and distribute the segment's duration across the tokens of `text`
 // proportionally to their length.
 const resolveSegment = (segment: CaptionSegment): ResolvedSegment => {
-  const authoredLines = segment.text.split("\n").map(collapseWhitespace).filter(Boolean);
+  const authoredLines = segment.text
+    .split("\n")
+    .map(collapseWhitespace)
+    .filter(Boolean);
   const lineTokens = authoredLines.map(tokenizeLine);
   const flatTokens = lineTokens.flat();
 
   const matches =
     flatTokens.length === segment.words.length &&
-    flatTokens.every((t, i) => t === collapseWhitespace(segment.words[i]!.text));
+    flatTokens.every(
+      (t, i) => t === collapseWhitespace(segment.words[i]!.text),
+    );
 
   let flatTimed: WordTiming[];
   if (matches) {
@@ -190,7 +211,8 @@ export const validateCaptions = (data: unknown): ResolvedCaptions => {
     // Point at the segment id when the path goes through `segments[i]`.
     let where = path;
     if (issue.path[0] === "segments" && typeof issue.path[1] === "number") {
-      const seg = raw?.segments?.[issue.path[1]] as { id?: unknown } | undefined;
+      const seg = raw?.segments?.[issue.path[1]] as
+        { id?: unknown } | undefined;
       if (typeof seg?.id === "string") {
         where = `segment "${seg.id}" → ${issue.path.slice(2).join(".") || "(segment)"}`;
       }

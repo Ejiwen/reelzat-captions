@@ -3,6 +3,8 @@ import type { z } from "zod";
 // with the component; ingest only narrows untrusted strings against it.
 import { parseHookBgTheme, type HookBgTheme } from "../overlays/HookBg/themes";
 import {
+  collapseWhitespace,
+  tokenizeLine,
   validateCaptions,
   type ResolvedCaptions,
   type WordTiming,
@@ -34,6 +36,14 @@ import {
 export const secondsToFrames = (seconds: number, fps: number): number =>
   Math.floor(seconds * fps);
 
+// ---------------------------------------------------------------------------
+// Every authored caption — one line or two — renders in the SAME bottom
+// caption band, directly above the ProgressBar ring: one reading position for
+// the whole reel, so the eye never has to travel. The top of the frame belongs
+// to the hook and the nameplate. authoring.json's caption `position` is
+// therefore descriptive only, and overlap validation uses this value.
+export const CAPTION_BAND_POSITION: OverlayPosition = "bottom";
+
 export type FrameWindow = {
   startFrame: number;
   endFrame: number;
@@ -56,6 +66,15 @@ export type ResolvedAuthoredCaption = {
   lines: string[];
   position: OverlayPosition;
   window: FrameWindow;
+  words?: ResolvedAuthoredWord[];
+  verse: boolean;
+  emphasis?: string[];
+};
+
+export type ResolvedAuthoredWord = {
+  text: string;
+  startFrame: number;
+  endFrame: number;
 };
 
 export type ResolvedAuthoring = {
@@ -114,7 +133,11 @@ export type ReelPackageInput = {
 // Validation. Same philosophy as src/schema/captions.ts: collect EVERY
 // violation across every file in the package, then throw one readable report.
 
-const zodProblems = (file: string, error: z.ZodError, problems: string[]): void => {
+const zodProblems = (
+  file: string,
+  error: z.ZodError,
+  problems: string[],
+): void => {
   for (const issue of error.issues) {
     const path = issue.path.length > 0 ? issue.path.join(".") : "(root)";
     problems.push(`${file} → ${path}: ${issue.message}`);
@@ -149,36 +172,123 @@ const checkAuthoring = (
   durationInSeconds: number,
   problems: string[],
 ): void => {
-  checkWindow("authoring.json → hook", authoring.hook.display, durationInSeconds, problems);
+  checkWindow(
+    "authoring.json → hook",
+    authoring.hook.display,
+    durationInSeconds,
+    problems,
+  );
 
   if (authoring.kind === "promo" && authoring.captions.length > 0) {
     problems.push(
       `authoring.json: a promo must have zero captions — received ${authoring.captions.length}`,
     );
   }
-  if (authoring.captions.length > 2) {
-    problems.push(
-      `authoring.json: at most 2 captions per reel — received ${authoring.captions.length}`,
-    );
-  }
-
   for (const [i, caption] of authoring.captions.entries()) {
     const where = `authoring.json → captions.${i}`;
     checkWindow(where, caption.display, durationInSeconds, problems);
-    if (caption.type === "short_1line" && caption.lines.length !== 1) {
-      problems.push(
-        `${where}: short_1line must have exactly 1 line — received ${caption.lines.length}`,
-      );
+    switch (caption.type) {
+      case "short_1line":
+        if (caption.lines.length !== 1) {
+          problems.push(
+            `${where}: short_1line must have exactly 1 line — received ${caption.lines.length}`,
+          );
+        }
+        if (caption.verse) {
+          problems.push(`${where}: verse is only valid for type "regular"`);
+        }
+        if (caption.words) {
+          problems.push(`${where}: words are only valid for type "regular"`);
+        }
+        break;
+      case "long_2lines":
+        if (caption.lines.length !== 2) {
+          problems.push(
+            `${where}: long_2lines must have exactly 2 lines — received ${caption.lines.length}`,
+          );
+        }
+        if (caption.verse) {
+          problems.push(`${where}: verse is only valid for type "regular"`);
+        }
+        if (caption.words) {
+          problems.push(`${where}: words are only valid for type "regular"`);
+        }
+        break;
+      case "regular": {
+        const tokens = caption.lines.flatMap(tokenizeLine);
+        if (tokens.length === 0) {
+          problems.push(`${where}: regular must contain at least one word`);
+        }
+        if (caption.verse && caption.lines.length < 2) {
+          problems.push(
+            `${where}: verse must contain at least 2 hemistich lines — received ${caption.lines.length}`,
+          );
+        }
+        if (caption.words && caption.words.length !== tokens.length) {
+          problems.push(
+            `${where}: regular words must match the rendered token count — expected ${tokens.length}, received ${caption.words.length}`,
+          );
+        }
+        if (caption.words) {
+          for (const [j, word] of caption.words.entries()) {
+            const wordWhere = `${where} → words.${j} ("${word.text}")`;
+            checkWindow(
+              `${wordWhere}.in_reel`,
+              word.in_reel,
+              durationInSeconds,
+              problems,
+            );
+            if (word.in_source.end <= word.in_source.start) {
+              problems.push(
+                `${wordWhere}.in_source: end must be greater than start — expected > ${word.in_source.start}, received ${word.in_source.end}`,
+              );
+            }
+            if (
+              word.in_reel.start < caption.display.start ||
+              word.in_reel.end > caption.display.end
+            ) {
+              problems.push(
+                `${wordWhere}: in_reel must be contained within caption display [${caption.display.start}, ${caption.display.end}]s — received [${word.in_reel.start}, ${word.in_reel.end}]s`,
+              );
+            }
+            const expected = tokens[j];
+            if (expected && collapseWhitespace(word.text) !== expected) {
+              problems.push(
+                `${wordWhere}: text must match rendered token ${j} — expected "${expected}", received "${collapseWhitespace(word.text)}"`,
+              );
+            }
+            const previous = caption.words[j - 1];
+            if (previous && word.in_reel.start < previous.in_reel.end) {
+              problems.push(
+                `${wordWhere}: authored words must be ordered and non-overlapping — expected start >= ${previous.in_reel.end}, received ${word.in_reel.start}`,
+              );
+            }
+          }
+        }
+        break;
+      }
     }
-    if (caption.type === "long_2lines" && caption.lines.length !== 2) {
-      problems.push(
-        `${where}: long_2lines must have exactly 2 lines — received ${caption.lines.length}`,
-      );
+
+    const captionTokens = new Set(
+      caption.lines.flatMap(tokenizeLine).map(collapseWhitespace),
+    );
+    for (const emphasis of caption.emphasis ?? []) {
+      if (!captionTokens.has(collapseWhitespace(emphasis))) {
+        problems.push(
+          `${where}: emphasis word "${emphasis}" does not occur in the rendered caption tokens`,
+        );
+      }
     }
   }
 
-  // Same-position elements (hook included) must never overlap in time.
-  const byPosition: Record<OverlayPosition, { name: string; start: number; end: number }[]> = {
+  // Elements that share a position must never overlap in time. Positions are
+  // the EFFECTIVE ones: every caption renders in the caption band regardless
+  // of what authoring.json says, so two captions overlapping in time is a
+  // collision even when they were authored at opposite ends of the frame.
+  const byPosition: Record<
+    OverlayPosition,
+    { name: string; start: number; end: number }[]
+  > = {
     top: [],
     bottom: [],
   };
@@ -188,7 +298,7 @@ const checkAuthoring = (
     end: authoring.hook.display.end,
   });
   for (const [i, caption] of authoring.captions.entries()) {
-    byPosition[caption.position].push({
+    byPosition[CAPTION_BAND_POSITION].push({
       name: `captions.${i}`,
       start: caption.display.start,
       end: caption.display.end,
@@ -208,7 +318,10 @@ const checkAuthoring = (
   }
 };
 
-const toFrameWindow = (display: { start: number; end: number }, fps: number): FrameWindow => ({
+const toFrameWindow = (
+  display: { start: number; end: number },
+  fps: number,
+): FrameWindow => ({
   startFrame: secondsToFrames(display.start, fps),
   endFrame: secondsToFrames(display.end, fps),
 });
@@ -218,7 +331,9 @@ const toFrameWindow = (display: { start: number; end: number }, fps: number): Fr
 export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
   const problems: string[] = [];
 
-  const sidecarParsed = sidecarSchema.safeParse(normalizeSidecar(input.sidecar));
+  const sidecarParsed = sidecarSchema.safeParse(
+    normalizeSidecar(input.sidecar),
+  );
   if (!sidecarParsed.success) {
     zodProblems("remotion.json", sidecarParsed.error, problems);
     throw new Error(formatProblems(input.clipId, problems));
@@ -236,7 +351,11 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
     }
   }
 
-  if (sidecar.captionSource === "authored" && authoring === null && problems.length === 0) {
+  if (
+    sidecar.captionSource === "authored" &&
+    authoring === null &&
+    problems.length === 0
+  ) {
     problems.push(
       `remotion.json: captionSource is "authored" but neither the sidecar nor authoring.json provides authoring data`,
     );
@@ -287,7 +406,11 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
       }
     }
   }
-  if (sidecar.captionSource === "asr" && asrCaptions === null && problems.length === 0) {
+  if (
+    sidecar.captionSource === "asr" &&
+    asrCaptions === null &&
+    problems.length === 0
+  ) {
     problems.push(
       `remotion.json: captionSource is "asr" but the package carries no ASR cues (sidecar captions[] and captions.json are both missing/empty)`,
     );
@@ -333,8 +456,18 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
         captions: authoring.captions.map((caption) => ({
           type: caption.type,
           lines: caption.lines,
-          position: caption.position,
+          // Captions have ONE home on screen — see CAPTION_BAND_POSITION.
+          // authoring.json may still say "top"; the reader must not have to
+          // hunt for the text, so the authored value is not honoured here.
+          position: CAPTION_BAND_POSITION,
           window: toFrameWindow(caption.display, fps),
+          words: caption.words?.map((word) => ({
+            text: word.text,
+            startFrame: secondsToFrames(word.in_reel.start, fps),
+            endFrame: secondsToFrames(word.in_reel.end, fps),
+          })),
+          verse: caption.verse,
+          emphasis: caption.emphasis,
         })),
         publish: authoring.publish ?? null,
       }
@@ -345,7 +478,9 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
     packageDir: input.packageDir,
     kind: authoring?.kind ?? "reel",
     captionSource: sidecar.captionSource,
-    language: authoring ? (authoring.source.language ?? sidecar.language) : sidecar.language,
+    language: authoring
+      ? (authoring.source.language ?? sidecar.language)
+      : sidecar.language,
     direction: authoring ? authoring.source.direction : sidecar.direction,
     title: authoring?.title ?? sidecar.title ?? null,
     media: {
