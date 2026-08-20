@@ -241,6 +241,9 @@ test("verse preserves every authored hemistich even when balancing would win", (
 
 test("authored emphasis matches normalized whole tokens only", () => {
   assert.equal(isAuthoredWordEmphasised("  السؤال ", ["السؤال"]), true);
+  assert.equal(isAuthoredWordEmphasised("الحفظُ،", ["الحفظ"]), true);
+  assert.equal(isAuthoredWordEmphasised("رحمة", ["رحمه"]), true);
+  assert.equal(isAuthoredWordEmphasised("فتى", ["فتي"]), true);
   assert.equal(isAuthoredWordEmphasised("السؤال", ["سؤال"]), false);
 });
 

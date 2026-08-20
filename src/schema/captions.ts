@@ -57,6 +57,19 @@ export type ResolvedCaptions = {
 
 export const collapseWhitespace = (s: string) => s.replace(/\s+/g, " ").trim();
 
+// Authored 2.2 emphasis and ASR words may differ from the display text only
+// by Arabic presentation details (harakat, tatweel, punctuation, ة/ه or
+// ى/ي). Keep the display spelling untouched, but compare semantic tokens
+// through one shared normal form at ingest and render time.
+export const normalizeAuthoredToken = (s: string): string =>
+  collapseWhitespace(s)
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/ـ/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي");
+
 // Tokenize one authored line of `text` using Intl.Segmenter — never split(" ").
 // Punctuation (non word-like segments) is merged into the preceding token so
 // "لمتابعتكم،" stays one visual unit.

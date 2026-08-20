@@ -69,8 +69,9 @@ public/reels/
   `regular` may carry `words[]`, where each word has `text` plus second-based
   `in_reel` and `in_source` windows. Only `in_reel` drives rendering and is
   resolved once to `{startFrame, endFrame}`. `verse: true` fixes every authored
-  line as one centred hemistich; `emphasis: [word, …]` highlights up to two
-  exact normalized word tokens on any authored caption type.
+  line (including a single hemistich) and gives it a distinct poetry surface;
+  `emphasis: [word, …]` highlights up to two Arabic-normalized whole-word
+  tokens on any authored caption type.
 - Everything is zod-validated defensively (`src/ingest/schemas.ts`); a broken
   package fails with **one report listing every problem**, same style as the
   legacy captions validator. Upstream guarantees that are still re-checked:

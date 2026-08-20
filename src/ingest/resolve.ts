@@ -4,6 +4,7 @@ import type { z } from "zod";
 import { parseHookBgTheme, type HookBgTheme } from "../overlays/HookBg/themes";
 import {
   collapseWhitespace,
+  normalizeAuthoredToken,
   tokenizeLine,
   validateCaptions,
   type ResolvedCaptions,
@@ -219,11 +220,6 @@ const checkAuthoring = (
         if (tokens.length === 0) {
           problems.push(`${where}: regular must contain at least one word`);
         }
-        if (caption.verse && caption.lines.length < 2) {
-          problems.push(
-            `${where}: verse must contain at least 2 hemistich lines — received ${caption.lines.length}`,
-          );
-        }
         if (caption.words && caption.words.length !== tokens.length) {
           problems.push(
             `${where}: regular words must match the rendered token count — expected ${tokens.length}, received ${caption.words.length}`,
@@ -252,7 +248,11 @@ const checkAuthoring = (
               );
             }
             const expected = tokens[j];
-            if (expected && collapseWhitespace(word.text) !== expected) {
+            if (
+              expected &&
+              normalizeAuthoredToken(word.text) !==
+                normalizeAuthoredToken(expected)
+            ) {
               problems.push(
                 `${wordWhere}: text must match rendered token ${j} — expected "${expected}", received "${collapseWhitespace(word.text)}"`,
               );
@@ -270,10 +270,10 @@ const checkAuthoring = (
     }
 
     const captionTokens = new Set(
-      caption.lines.flatMap(tokenizeLine).map(collapseWhitespace),
+      caption.lines.flatMap(tokenizeLine).map(normalizeAuthoredToken),
     );
     for (const emphasis of caption.emphasis ?? []) {
-      if (!captionTokens.has(collapseWhitespace(emphasis))) {
+      if (!captionTokens.has(normalizeAuthoredToken(emphasis))) {
         problems.push(
           `${where}: emphasis word "${emphasis}" does not occur in the rendered caption tokens`,
         );

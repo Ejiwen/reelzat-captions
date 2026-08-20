@@ -7,7 +7,9 @@ import fixture from "./fixture.json";
 import reflowFixture from "./fixture-reflow.json";
 import type { OverlayPosition, TextDirection } from "../types";
 
-const Stage: React.FC<{ fixture: typeof fixture }> = ({ fixture: f }) => (
+const Stage: React.FC<{
+  fixture: typeof fixture | typeof reflowFixture;
+}> = ({ fixture: f }) => (
   <DemoStage>
     <ProgressBar
       direction={f.direction as TextDirection}

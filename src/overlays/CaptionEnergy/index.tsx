@@ -299,6 +299,9 @@ export type CaptionEnergySurfaceProps = {
   children: React.ReactNode;
   config?: Partial<CaptionEnergyConfig>;
   theme?: HookBgTheme;
+  // Verse retains the shared layer geometry but receives a quieter,
+  // manuscript-like plate and ornament instead of the prose edge rail.
+  variant?: "standard" | "verse";
 };
 
 // An opaque-enough local contrast field plus backdrop blur. Its dual dark
@@ -313,6 +316,7 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
   children,
   config: overrides,
   theme,
+  variant = "standard",
 }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
@@ -324,6 +328,7 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
         hookConfig.background.defaultTheme
     ];
   const px = width / 1080;
+  const isVerse = variant === "verse";
   const local = frame - window.startFrame;
   const revealStart = reduced
     ? 0
@@ -456,8 +461,10 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
           inset: `${-12 * px}px ${-Math.min(16, config.surfaceSafeGapPx) * px}px`,
           zIndex: -3,
           borderRadius: (radius + 14) * px,
-          opacity: reveal * (1 - exit) * 0.34,
-          background: `radial-gradient(ellipse 42% 78% at 92% 48%, color-mix(in oklch, ${themePalette.highlight} 38%, transparent), transparent 76%), radial-gradient(ellipse 46% 80% at 8% 52%, color-mix(in oklch, ${themePalette.primary} 40%, transparent), transparent 78%)`,
+          opacity: reveal * (1 - exit) * (isVerse ? 0.27 : 0.34),
+          background: isVerse
+            ? `radial-gradient(ellipse 58% 92% at 50% 50%, color-mix(in oklch, ${themePalette.highlight} 26%, #d9b86c), transparent 76%)`
+            : `radial-gradient(ellipse 42% 78% at 92% 48%, color-mix(in oklch, ${themePalette.highlight} 38%, transparent), transparent 76%), radial-gradient(ellipse 46% 80% at 8% 52%, color-mix(in oklch, ${themePalette.primary} 40%, transparent), transparent 78%)`,
           filter: `blur(${22 * px}px)`,
           mixBlendMode: "screen",
         }}
@@ -474,11 +481,15 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
           // The template palette IS the caption's colour: a primary field on
           // the reading side, a secondary wash opposite it, over the theme's
           // own vignette/base. Only the ink stays neutral.
-          background: `
+          background: isVerse
+            ? `
+          radial-gradient(ellipse 72% 130% at 50% -24%, color-mix(in oklch, #d9b86c 18%, transparent) 0%, transparent 72%),
+          linear-gradient(112deg, color-mix(in oklch, ${themePalette.base} 78%, rgba(9,7,5,0.95)) 0%, color-mix(in oklch, ${themePalette.vignette} 88%, #17120c) 52%, color-mix(in oklch, ${themePalette.base} 82%, #090807) 100%)`
+            : `
           radial-gradient(ellipse 56% 150% at 100% 46%, color-mix(in oklch, ${themePalette.primary} 56%, transparent) 0%, transparent 74%),
           radial-gradient(ellipse 82% 150% at 0% -12%, color-mix(in oklch, ${themePalette.secondary} 34%, transparent) 0%, transparent 70%),
           linear-gradient(112deg, color-mix(in oklch, ${themePalette.base} 72%, rgba(4,7,14,0.94)) 0%, color-mix(in oklch, ${themePalette.vignette} 84%, ${themePalette.base}) 54%, color-mix(in oklch, ${themePalette.base} 88%, #0a0c13) 100%)`,
-          border: `${Math.max(1, 1.25 * px)}px solid color-mix(in oklch, ${themePalette.highlight} 32%, rgba(255,255,255,0.12))`,
+          border: `${Math.max(1, 1.25 * px)}px solid color-mix(in oklch, ${isVerse ? "#d9b86c" : themePalette.highlight} ${isVerse ? 46 : 32}%, rgba(255,255,255,0.12))`,
           boxShadow: `0 ${14 * px}px ${42 * px}px rgba(0,0,0,0.56), 0 ${3 * px}px ${8 * px}px rgba(0,0,0,0.3), inset 0 ${1 * px}px 0 rgba(255,255,255,0.13), inset 0 ${-1 * px}px 0 rgba(0,0,0,0.48), 0 0 ${22 * px}px color-mix(in oklch, ${themePalette.primary} 12%, transparent)`,
           WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
           backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
@@ -536,25 +547,67 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
         />
       </div>
 
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          zIndex: 2,
-          insetInlineStart: config.edgeAccentInsetPx * px,
-          // Grows with the block so a three-line card keeps the same optical
-          // proportion between rail and text.
-          top: lineCount <= 1 ? "30%" : lineCount === 2 ? "24%" : "20%",
-          width: config.edgeAccentWidthPx * px,
-          height: lineCount <= 1 ? "40%" : lineCount === 2 ? "52%" : "60%",
-          borderRadius: 999,
-          opacity: accentReveal * config.edgeAccentOpacity * (1 - exit),
-          transform: `scaleY(${accentReveal.toFixed(4)})`,
-          transformOrigin: "center",
-          background: `linear-gradient(180deg, ${themePalette.highlight}, ${themePalette.primary})`,
-          boxShadow: `0 0 ${10 * px}px color-mix(in oklch, ${themePalette.highlight} 62%, transparent)`,
-        }}
-      />
+      {isVerse ? (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            zIndex: 2,
+            insetInline: "31%",
+            top: 7 * px,
+            height: 7 * px,
+            display: "flex",
+            alignItems: "center",
+            gap: 8 * px,
+            opacity: accentReveal * (1 - exit) * 0.72,
+            transform: `scaleX(${accentReveal.toFixed(4)})`,
+          }}
+        >
+          <div
+            style={{
+              height: Math.max(1, px),
+              flex: 1,
+              background: "linear-gradient(90deg, transparent, #d9b86c)",
+            }}
+          />
+          <div
+            style={{
+              width: 5 * px,
+              height: 5 * px,
+              transform: "rotate(45deg)",
+              background: "#d9b86c",
+              boxShadow: `0 0 ${7 * px}px color-mix(in oklch, ${themePalette.highlight} 55%, transparent)`,
+            }}
+          />
+          <div
+            style={{
+              height: Math.max(1, px),
+              flex: 1,
+              background: "linear-gradient(90deg, #d9b86c, transparent)",
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            zIndex: 2,
+            insetInlineStart: config.edgeAccentInsetPx * px,
+            // Grows with the block so a three-line card keeps the same optical
+            // proportion between rail and text.
+            top: lineCount <= 1 ? "30%" : lineCount === 2 ? "24%" : "20%",
+            width: config.edgeAccentWidthPx * px,
+            height: lineCount <= 1 ? "40%" : lineCount === 2 ? "52%" : "60%",
+            borderRadius: 999,
+            opacity: accentReveal * config.edgeAccentOpacity * (1 - exit),
+            transform: `scaleY(${accentReveal.toFixed(4)})`,
+            transformOrigin: "center",
+            background: `linear-gradient(180deg, ${themePalette.highlight}, ${themePalette.primary})`,
+            boxShadow: `0 0 ${10 * px}px color-mix(in oklch, ${themePalette.highlight} 62%, transparent)`,
+          }}
+        />
+      )}
 
       <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
     </div>

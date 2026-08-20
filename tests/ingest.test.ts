@@ -195,6 +195,58 @@ test("regular authored word seconds resolve to frames and metadata is retained",
   assert.equal(pkg.authored?.captions[0]?.verse, false);
 });
 
+test("2.2 Arabic normalization accepts diacritics in words and emphasis", () => {
+  const pkg = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring({
+      captions: [
+        {
+          type: "regular",
+          lines: ["الحفظُ رحمة"],
+          position: "bottom",
+          display: { start: 4, end: 7 },
+          words: [
+            {
+              text: "الحفظ",
+              in_reel: { start: 4, end: 5 },
+              in_source: { start: 104, end: 105 },
+            },
+            {
+              text: "رحمه",
+              in_reel: { start: 5, end: 6 },
+              in_source: { start: 105, end: 106 },
+            },
+          ],
+          emphasis: ["الحفظ"],
+        },
+      ],
+    }),
+  });
+  assert.deepEqual(pkg.authored?.captions[0]?.emphasis, ["الحفظ"]);
+});
+
+test("a single authored hemistich is a valid 2.2 verse", () => {
+  const pkg = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring({
+      captions: [
+        {
+          type: "regular",
+          lines: ["على قدر أهل العزم"],
+          position: "bottom",
+          display: { start: 4, end: 7 },
+          verse: true,
+        },
+      ],
+    }),
+  });
+  assert.equal(pkg.authored?.captions[0]?.verse, true);
+});
+
 test("one authored reel may contain short, long, and regular caption types", () => {
   const pkg = resolveReelPackage({
     clipId: "reel-x",
@@ -229,7 +281,7 @@ test("one authored reel may contain short, long, and regular caption types", () 
   );
 });
 
-test("malformed regular timing and verse metadata produce clear errors", () => {
+test("malformed regular timing metadata produces clear errors", () => {
   assert.throws(
     () =>
       resolveReelPackage({
@@ -258,7 +310,6 @@ test("malformed regular timing and verse metadata produce clear errors", () => {
       }),
     (err: unknown) => {
       const message = (err as Error).message;
-      assert.match(message, /verse must contain at least 2 hemistich lines/);
       assert.match(
         message,
         /regular words must match the rendered token count/,

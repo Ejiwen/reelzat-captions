@@ -11,7 +11,7 @@ import {
   textShadow,
   typeScale,
 } from "../design/tokens";
-import { collapseWhitespace } from "../schema/captions";
+import { normalizeAuthoredToken } from "../schema/captions";
 import { hookBgPalettes, type HookBgTheme } from "./HookBg/themes";
 import { hookConfig } from "./Hook/config";
 import { staggeredWordStyle, wordStaggerFrames } from "./wordStagger";
@@ -47,9 +47,9 @@ export const isAuthoredWordEmphasised = (
   word: string,
   emphasis: string[] = [],
 ): boolean => {
-  const normalized = collapseWhitespace(word);
+  const normalized = normalizeAuthoredToken(word);
   return emphasis.some(
-    (candidate) => collapseWhitespace(candidate) === normalized,
+    (candidate) => normalizeAuthoredToken(candidate) === normalized,
   );
 };
 
@@ -68,6 +68,7 @@ export const activeAuthoredWordIndex = (
 
 const accentRamp = oklchRamp([palette.sky, palette.cyan]);
 const verseInk = mixOklch(palette.ink, palette.gold, 0.35);
+const verseAccentRamp = oklchRamp([verseInk, palette.gold]);
 
 export const authoredKaraokeWordStyle = ({
   frame,
@@ -76,6 +77,7 @@ export const authoredKaraokeWordStyle = ({
   isActive,
   isPast,
   isEmphasised,
+  verse = false,
 }: {
   frame: number;
   fps: number;
@@ -83,6 +85,7 @@ export const authoredKaraokeWordStyle = ({
   isActive: boolean;
   isPast: boolean;
   isEmphasised: boolean;
+  verse?: boolean;
 }): React.CSSProperties => {
   const transition = motion.wordTransitionFrames;
   const tIn = interpolate(
@@ -98,9 +101,15 @@ export const authoredKaraokeWordStyle = ({
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
   const activeColour = isEmphasised
-    ? accentRamp(tIn)
+    ? (verse ? verseAccentRamp : accentRamp)(tIn)
     : mixOklch(palette.muted, palette.ink, tIn);
-  const settledColour = isEmphasised ? palette.cyan : palette.ink;
+  const settledColour = isEmphasised
+    ? verse
+      ? palette.gold
+      : palette.cyan
+    : verse
+      ? verseInk
+      : palette.ink;
   const springIn =
     frame < timing.startFrame
       ? 0
@@ -211,6 +220,7 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
                   isActive: flatIndex === activeWordIndex,
                   isPast: flatIndex < activeWordIndex,
                   isEmphasised,
+                  verse,
                 })
               : stagger
                 ? staggeredWordStyle({
@@ -223,7 +233,7 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
                   })
                 : {};
             if (isEmphasised && !timing) {
-              style.color = accentRamp(0.8);
+              style.color = (verse ? verseAccentRamp : accentRamp)(0.8);
               style.transform = `${style.transform ?? ""} scale(1.03)`.trim();
             }
             return <Word key={wordIndex} text={word} style={style} />;

@@ -1,5 +1,8 @@
 {
-  "data": { "lines": ["أربع دول من دولة واحدة"] },
+  "data": {
+    "lines": ["الحفظُ هبةٌ من الله"],
+    "emphasis": ["الحفظ"]
+  },
   "window": { "startFrame": 15, "endFrame": 120 },
   "position": "bottom",
   "direction": "rtl"

@@ -14,7 +14,10 @@ import { OverlayRoot } from "../OverlayRoot";
 import { progressBarConfig } from "../ProgressBar/config";
 import { captionBottomOffsetAboveProgressPx } from "../ProgressBar/math";
 import { DEFAULT_SAFE_AREA, type OverlayBaseProps } from "../types";
-import { captionRegularDefaultAnimation } from "./animations";
+import {
+  captionRegularDefaultAnimation,
+  captionRegularVerseAnimation,
+} from "./animations";
 
 export type CaptionRegularProps = OverlayBaseProps & {
   data: {
@@ -35,7 +38,7 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
   window,
   position,
   direction,
-  animation = captionRegularDefaultAnimation,
+  animation,
   safeArea,
   textZone,
   fontScale = 1,
@@ -73,6 +76,11 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
       position === "bottom" ? captionEnergyConfig.surfaceTopLimitPct : 0,
     paddingBlockPx: captionEnergyConfig.surfacePaddingBlockPx * px * 1.1,
   });
+  const resolvedAnimation =
+    animation ??
+    (data.verse
+      ? captionRegularVerseAnimation
+      : captionRegularDefaultAnimation);
 
   const layout = useMemo(
     () =>
@@ -94,7 +102,7 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
       window={window}
       position={position}
       direction={direction}
-      animation={animation}
+      animation={resolvedAnimation}
       safeArea={resolvedSafeArea}
       textZone={textZone}
       bottomOffsetPx={bottomOffsetPx}
@@ -109,6 +117,7 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
         safeArea={resolvedSafeArea}
         theme={theme}
         reduced={reduced}
+        variant={data.verse ? "verse" : "standard"}
       >
         <CaptionLines
           lines={layout.lines}
