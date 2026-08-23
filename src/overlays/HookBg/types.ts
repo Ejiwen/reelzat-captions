@@ -24,11 +24,10 @@ export type HookBgShape = "band" | "ellipse";
 //    sweep, controlled by `lightSweepOpacity`.
 export type HookBgConfig = {
   enabled: boolean;
-  // THE EASY SWITCH: set to one of the five themes to use it for every reel
-  // in the project — wins over the packages' hook.backgroundTheme and the
-  // keyword fallback, without touching any authoring.json. null = per-reel
-  // behaviour. (The Studio prop `hookBgTheme` still wins over this, so a
-  // single reel can be re-themed at render time.)
+  // THE EASY SWITCH: set to one of the registered themes to use it for every reel
+  // in the project when an individual package has no hook.backgroundTheme.
+  // The Studio prop and package value win, so special reels can opt into
+  // `featured` without changing the project-wide fallback.
   themeOverride: HookBgTheme | null;
   // Used when neither the reel package nor the caller picks a theme.
   defaultTheme: HookBgTheme;

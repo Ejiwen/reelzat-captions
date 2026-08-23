@@ -326,6 +326,17 @@ export const directorZoneSchema = z.object({
 });
 export type DirectorZone = z.infer<typeof directorZoneSchema>;
 
+export const directorSplitWindowSchema = z
+  .object({
+    startMs: z.number().nonnegative(),
+    endMs: z.number().nonnegative(),
+    centerYPct: z.number().min(0).max(100),
+  })
+  .refine((window) => window.endMs > window.startMs, {
+    message: "split window endMs must be greater than startMs",
+  });
+export type DirectorSplitWindow = z.infer<typeof directorSplitWindowSchema>;
+
 export const directorSchema = z.object({
   faces: z
     .array(
@@ -342,6 +353,9 @@ export const directorSchema = z.object({
     .default([]),
   cuts: z.array(z.number().nonnegative()).default([]),
   split: z.unknown().optional(),
+  // Canonical timed windows derived from splitScreen + its referenced
+  // director segments. Only genuine full-width top/bottom splits enter here.
+  splitWindows: z.array(directorSplitWindowSchema).default([]),
 });
 export type Director = z.infer<typeof directorSchema>;
 
@@ -393,6 +407,77 @@ export const normalizeDirector = (data: unknown): unknown => {
   }
   if (obj["split"] == null && obj["splitScreen"] != null) {
     obj["split"] = obj["splitScreen"];
+  }
+
+  // reelzy describes split geometry once, then points at the timed entries in
+  // director.segments by id. Fold that two-part representation into simple
+  // windows before Zod strips fields this renderer does not otherwise use.
+  const split = obj["split"];
+  if (isRecord(split) && split["used"] === true) {
+    const panels = Array.isArray(split["panels"])
+      ? split["panels"].filter(isRecord)
+      : [];
+    const panelNorms = panels
+      .map((panel) => {
+        const output = panel["output"];
+        return isRecord(output) && isRecord(output["norm"])
+          ? output["norm"]
+          : null;
+      })
+      .filter((norm): norm is Record<string, unknown> => norm !== null);
+    const isTopBottomHalf =
+      panelNorms.length === 2 &&
+      panelNorms.every(
+        (norm) =>
+          typeof norm["x"] === "number" &&
+          typeof norm["y"] === "number" &&
+          typeof norm["w"] === "number" &&
+          typeof norm["h"] === "number" &&
+          Math.abs(norm["x"]) <= 0.02 &&
+          Math.abs(norm["w"] - 1) <= 0.02 &&
+          Math.abs(norm["h"] - 0.5) <= 0.03,
+      ) &&
+      panelNorms.some((norm) => Math.abs((norm["y"] as number) - 0) <= 0.03) &&
+      panelNorms.some((norm) => Math.abs((norm["y"] as number) - 0.5) <= 0.03);
+
+    if (isTopBottomHalf) {
+      const divider = split["divider"];
+      const dividerNorm = isRecord(divider) ? divider["norm"] : null;
+      const dividerCenter =
+        isRecord(dividerNorm) &&
+        typeof dividerNorm["y"] === "number" &&
+        typeof dividerNorm["h"] === "number"
+          ? dividerNorm["y"] + dividerNorm["h"] / 2
+          : 0.5;
+      const wantedIds = new Set(
+        Array.isArray(split["segments"])
+          ? split["segments"].filter(
+              (id): id is string => typeof id === "string",
+            )
+          : [],
+      );
+      const segments = Array.isArray(obj["segments"])
+        ? obj["segments"].filter(isRecord)
+        : [];
+      obj["splitWindows"] = segments
+        .filter((segment) =>
+          wantedIds.size > 0
+            ? typeof segment["id"] === "string" && wantedIds.has(segment["id"])
+            : segment["mode"] === "two_person_split",
+        )
+        .filter(
+          (segment) =>
+            typeof segment["t0"] === "number" &&
+            typeof segment["t1"] === "number" &&
+            segment["t0"] >= 0 &&
+            segment["t1"] > segment["t0"],
+        )
+        .map((segment) => ({
+          startMs: Math.round((segment["t0"] as number) * 1000),
+          endMs: Math.round((segment["t1"] as number) * 1000),
+          centerYPct: Math.max(0, Math.min(100, r(dividerCenter))),
+        }));
+    }
   }
   return obj;
 };

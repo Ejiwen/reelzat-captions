@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { useVideoConfig } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 import { overlayType } from "../../design/tokens";
 import { tokenizeLine } from "../../schema/captions";
 import { CaptionLines } from "../CaptionLines";
@@ -15,6 +15,7 @@ import { progressBarConfig } from "../ProgressBar/config";
 import { captionBottomOffsetAboveProgressPx } from "../ProgressBar/math";
 import { captionLongDefaultAnimation } from "./animations";
 import type { HookBgTheme } from "../HookBg/themes";
+import { captionPlacementStyle } from "../captionSplitPlacement";
 
 export type CaptionLongProps = OverlayBaseProps & {
   data: {
@@ -42,12 +43,14 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
   animation = captionLongDefaultAnimation,
   safeArea,
   textZone,
+  splitWindows = [],
   fontScale = 1,
   stagger = true,
   reduced,
   theme,
 }) => {
-  const { width, height } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
   const px = width / 1080;
 
   const resolvedSafeArea = safeArea ?? DEFAULT_SAFE_AREA;
@@ -94,6 +97,18 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
       }),
     [data.lines, baseSize, maxLineWidth, maxTextHeight],
   );
+  const placementStyle =
+    bottomOffsetPx !== undefined && splitWindows.length > 0
+      ? captionPlacementStyle({
+          frame,
+          fps,
+          height,
+          safeArea: resolvedSafeArea,
+          bottomOffsetPx,
+          windows: splitWindows,
+          reduced,
+        })
+      : undefined;
 
   return (
     <OverlayRoot
@@ -104,6 +119,7 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
       safeArea={resolvedSafeArea}
       textZone={textZone}
       bottomOffsetPx={bottomOffsetPx}
+      placementStyle={placementStyle}
       reduced={reduced}
       trailOnEntry={stagger}
     >
@@ -113,6 +129,7 @@ export const CaptionLong: React.FC<CaptionLongProps> = ({
         position={position}
         textZone={textZone}
         safeArea={resolvedSafeArea}
+        splitWindows={splitWindows}
         theme={theme}
         reduced={reduced}
       >

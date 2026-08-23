@@ -3,6 +3,7 @@ import { useVideoConfig } from "remotion";
 import { fontFamily, reelTypography } from "../../design/fonts";
 import { overlaySurfaces, overlayType, palette } from "../../design/tokens";
 import { OverlayRoot } from "../OverlayRoot";
+import { hookBgPalettes, type HookBgTheme } from "../HookBg/themes";
 import { facebookSafeRegionTopPx } from "../ProgressBar/math";
 import type { OverlayBaseProps } from "../types";
 import { nameplateDefaultAnimation } from "./animations";
@@ -12,6 +13,7 @@ export type NameplateProps = OverlayBaseProps & {
     channel: string;
     episodeTitle?: string;
   };
+  theme?: HookBgTheme;
 };
 
 const nameplateSeparatorColor = "#E8D61A";
@@ -28,6 +30,7 @@ export const Nameplate: React.FC<NameplateProps> = ({
   textZone,
   fontScale = 1,
   reduced,
+  theme,
 }) => {
   const { width, height } = useVideoConfig();
 
@@ -42,6 +45,8 @@ export const Nameplate: React.FC<NameplateProps> = ({
   // The anchor sits in the upper third of the shared centered 4:5 safe region.
   const anchorX = width * (resolvedSidePct / 100);
   const anchorY = safeTop + safeRegionHeight * 0.28;
+  const themePalette = theme ? hookBgPalettes[theme] : null;
+  const isLightTheme = themePalette?.surface === "light";
 
   return (
     <OverlayRoot
@@ -79,7 +84,15 @@ export const Nameplate: React.FC<NameplateProps> = ({
           maxWidth: width * 0.72,
           padding: `${channelSize * 0.22}px ${channelSize * 0.58}px`,
           borderRadius: channelSize * 0.42,
-          background: overlaySurfaces.chipBackground,
+          background: isLightTheme
+            ? `linear-gradient(118deg, color-mix(in oklch, ${themePalette.highlight} 94%, transparent), color-mix(in oklch, ${themePalette.base} 92%, ${themePalette.secondary}))`
+            : overlaySurfaces.chipBackground,
+          border: isLightTheme
+            ? `1px solid color-mix(in oklch, ${themePalette.vignette} 26%, white)`
+            : undefined,
+          boxShadow: isLightTheme
+            ? `0 ${channelSize * 0.16}px ${channelSize * 0.55}px rgba(16,32,51,0.2), inset 0 1px 0 rgba(255,255,255,0.88)`
+            : undefined,
           fontFamily,
           lineHeight: 1.35,
           whiteSpace: "nowrap",
@@ -92,7 +105,7 @@ export const Nameplate: React.FC<NameplateProps> = ({
           style={{
             fontSize: channelSize,
             fontWeight: reelTypography.nameplateChannel,
-            color: palette.ink,
+            color: themePalette?.foreground ?? palette.ink,
             flexShrink: 0,
           }}
         >
@@ -106,7 +119,7 @@ export const Nameplate: React.FC<NameplateProps> = ({
                 height: channelSize * 0.54,
                 flexShrink: 0,
                 borderRadius: "50%",
-                background: nameplateSeparatorColor,
+                background: themePalette?.accent ?? nameplateSeparatorColor,
                 boxShadow: `0 0 ${channelSize * 0.2}px color-mix(in oklch, ${nameplateSeparatorColor} 55%, transparent)`,
               }}
             />
@@ -117,7 +130,9 @@ export const Nameplate: React.FC<NameplateProps> = ({
                 textOverflow: "ellipsis",
                 fontSize: episodeSize,
                 fontWeight: reelTypography.nameplateEpisode,
-                color: `color-mix(in oklch, ${palette.ink} 88%, ${palette.muted})`,
+                color:
+                  themePalette?.mutedForeground ??
+                  `color-mix(in oklch, ${palette.ink} 88%, ${palette.muted})`,
               }}
             >
               {data.episodeTitle}

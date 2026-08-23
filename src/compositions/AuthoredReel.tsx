@@ -49,8 +49,8 @@ export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
     ? resolveHookBgTheme({
         explicit:
           props.hookBgTheme ??
-          hookConfig.background.themeOverride ??
           pkg.authored.hook.backgroundTheme ??
+          hookConfig.background.themeOverride ??
           undefined,
         text: pkg.authored.hook.text,
         fallback: hookConfig.background.defaultTheme,
@@ -217,13 +217,13 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
 
   // Resolve the HookBg theme ONCE — the energy bridge and the Hook (which
   // renders HookBg) must always agree. Priority: Studio prop → project-wide
-  // hookConfig.background.themeOverride → the package's hook.backgroundTheme
+  // the package's hook.backgroundTheme → project-wide fallback
   // → keyword fallback on the hook text → configured default.
   const resolvedHookBgTheme = resolveHookBgTheme({
     explicit:
       hookBgTheme ??
-      hookConfig.background.themeOverride ??
       hook.backgroundTheme ??
+      hookConfig.background.themeOverride ??
       undefined,
     text: hook.text,
     fallback: hookConfig.background.defaultTheme,
@@ -290,6 +290,8 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         <CaptionScrim
           windows={bottomCaptionWindows}
           bottomPct={pkg.safeArea.bottomPct}
+          splitWindows={pkg.splitScreenWindows}
+          reduced={reduced}
         />
       ) : null}
       {asrSubtitles && pkg.asr.words.length > 0 ? (
@@ -309,6 +311,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
             position={caption.position}
             textZone={zoneFor(pkg, caption.position)}
             safeArea={pkg.safeArea}
+            splitWindows={pkg.splitScreenWindows}
             lineCount={captionLineCount(caption)}
             reduced={reduced}
             theme={resolvedHookBgTheme}
@@ -350,6 +353,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         position={nameplatePosition}
         direction={pkg.direction}
         safeArea={pkg.safeArea}
+        theme={resolvedHookBgTheme}
         fontScale={fontScale}
         reduced={reduced}
       />
@@ -403,6 +407,7 @@ const AuthoredCaption: React.FC<{
     animation: animation ?? undefined,
     safeArea: pkg.safeArea,
     textZone: zoneFor(pkg, caption.position),
+    splitWindows: pkg.splitScreenWindows,
     fontScale,
     reduced,
     theme,

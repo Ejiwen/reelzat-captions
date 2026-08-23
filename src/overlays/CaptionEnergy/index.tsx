@@ -9,6 +9,7 @@ import {
   DEFAULT_SAFE_AREA,
   type OverlayPosition,
   type OverlaySafeArea,
+  type OverlaySplitWindow,
   type OverlayTextZone,
   type OverlayWindow,
 } from "../types";
@@ -20,6 +21,7 @@ import {
   type HookBgTheme,
 } from "../HookBg/themes";
 import { hookConfig } from "../Hook/config";
+import { captionSplitPlacementAtFrame } from "../captionSplitPlacement";
 
 type Point = { x: number; y: number };
 
@@ -43,6 +45,7 @@ const captionTarget = ({
   textZone,
   safeArea,
   lineCount,
+  splitPlacement,
 }: {
   width: number;
   height: number;
@@ -50,6 +53,7 @@ const captionTarget = ({
   textZone?: OverlayTextZone | null;
   safeArea: OverlaySafeArea;
   lineCount: number;
+  splitPlacement?: { mix: number; centerYPct: number };
 }): Point => {
   // Production captions live above ProgressBar. For a director-defined top
   // zone, honour that geometry instead of forcing a bottom placement.
@@ -65,9 +69,19 @@ const captionTarget = ({
       y: height * (safeArea.topPct / 100),
     };
   }
-  return {
+  const naturalTarget = {
     x: width / 2,
     y: height - captionBottomOffset(width, height) + 7 * (width / 1080),
+  };
+  if (!splitPlacement || splitPlacement.mix <= 0) {
+    return naturalTarget;
+  }
+  return {
+    x: naturalTarget.x,
+    y:
+      naturalTarget.y +
+      (height * (splitPlacement.centerYPct / 100) - naturalTarget.y) *
+        splitPlacement.mix,
   };
 };
 
@@ -77,6 +91,7 @@ export type CaptionEnergyBridgeProps = {
   textZone?: OverlayTextZone | null;
   safeArea?: OverlaySafeArea;
   lineCount: number;
+  splitWindows?: OverlaySplitWindow[];
   reduced?: boolean;
   config?: Partial<CaptionEnergyConfig>;
   theme?: HookBgTheme;
@@ -90,6 +105,7 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
   textZone,
   safeArea = DEFAULT_SAFE_AREA,
   lineCount,
+  splitWindows = [],
   reduced,
   config: overrides,
   theme,
@@ -122,6 +138,12 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
     config: progressBarConfig,
   });
   const source: Point = { x: sourceGeo.centerX, y: sourceGeo.centerY };
+  const splitPlacement = captionSplitPlacementAtFrame({
+    frame,
+    fps,
+    windows: splitWindows,
+    reduced,
+  });
   const target = captionTarget({
     width,
     height,
@@ -129,6 +151,7 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
     textZone,
     safeArea,
     lineCount,
+    splitPlacement,
   });
   const ignitionEnd = atFps(config.ignitionFrames, fps);
   const travelEnd = ignitionEnd + atFps(config.travelFrames, fps);
@@ -295,6 +318,7 @@ export type CaptionEnergySurfaceProps = {
   position: OverlayPosition;
   textZone?: OverlayTextZone | null;
   safeArea?: OverlaySafeArea;
+  splitWindows?: OverlaySplitWindow[];
   reduced?: boolean;
   children: React.ReactNode;
   config?: Partial<CaptionEnergyConfig>;
@@ -312,6 +336,7 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
   position,
   textZone,
   safeArea = DEFAULT_SAFE_AREA,
+  splitWindows = [],
   reduced,
   children,
   config: overrides,
@@ -329,6 +354,7 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
     ];
   const px = width / 1080;
   const isVerse = variant === "verse";
+  const isLightTheme = themePalette.surface === "light";
   const local = frame - window.startFrame;
   const revealStart = reduced
     ? 0
@@ -354,6 +380,12 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
     height,
     config: progressBarConfig,
   });
+  const splitPlacement = captionSplitPlacementAtFrame({
+    frame,
+    fps,
+    windows: splitWindows,
+    reduced,
+  });
   const target = captionTarget({
     width,
     height,
@@ -361,6 +393,7 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
     textZone,
     safeArea,
     lineCount,
+    splitPlacement,
   });
   const launchStart = Math.max(0, revealStart - atFps(2, fps));
   // Transform progress carries a small overshoot so the card SETTLES instead
@@ -435,6 +468,19 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
     textZone,
     safeGapPx: config.surfaceSafeGapPx,
   });
+  const surfaceBackground = isLightTheme
+    ? `
+      radial-gradient(ellipse 34% 150% at 14% -18%, color-mix(in oklch, ${themePalette.highlight} 48%, transparent) 0%, transparent 72%),
+      radial-gradient(ellipse 46% 160% at 92% 78%, color-mix(in oklch, ${themePalette.secondary} 34%, transparent) 0%, transparent 74%),
+      linear-gradient(112deg, rgba(252,254,255,0.78) 0%, color-mix(in oklch, ${themePalette.primary} 66%, transparent) 52%, color-mix(in oklch, ${themePalette.secondary} 58%, transparent) 100%)`
+    : isVerse
+      ? `
+        radial-gradient(ellipse 72% 130% at 50% -24%, color-mix(in oklch, #d9b86c 18%, transparent) 0%, transparent 72%),
+        linear-gradient(112deg, color-mix(in oklch, ${themePalette.base} 78%, rgba(9,7,5,0.95)) 0%, color-mix(in oklch, ${themePalette.vignette} 88%, #17120c) 52%, color-mix(in oklch, ${themePalette.base} 82%, #090807) 100%)`
+      : `
+        radial-gradient(ellipse 56% 150% at 100% 46%, color-mix(in oklch, ${themePalette.primary} 56%, transparent) 0%, transparent 74%),
+        radial-gradient(ellipse 82% 150% at 0% -12%, color-mix(in oklch, ${themePalette.secondary} 34%, transparent) 0%, transparent 70%),
+        linear-gradient(112deg, color-mix(in oklch, ${themePalette.base} 72%, rgba(4,7,14,0.94)) 0%, color-mix(in oklch, ${themePalette.vignette} 84%, ${themePalette.base}) 54%, color-mix(in oklch, ${themePalette.base} 88%, #0a0c13) 100%)`;
 
   return (
     <div
@@ -466,7 +512,7 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
             ? `radial-gradient(ellipse 58% 92% at 50% 50%, color-mix(in oklch, ${themePalette.highlight} 26%, #d9b86c), transparent 76%)`
             : `radial-gradient(ellipse 42% 78% at 92% 48%, color-mix(in oklch, ${themePalette.highlight} 38%, transparent), transparent 76%), radial-gradient(ellipse 46% 80% at 8% 52%, color-mix(in oklch, ${themePalette.primary} 40%, transparent), transparent 78%)`,
           filter: `blur(${22 * px}px)`,
-          mixBlendMode: "screen",
+          mixBlendMode: isLightTheme ? "normal" : "screen",
         }}
       />
       <div
@@ -477,22 +523,21 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
           zIndex: -1,
           borderRadius: radius * px,
           overflow: "hidden",
-          opacity: config.surfaceOpacity * reveal * (1 - exit),
+          opacity:
+            config.surfaceOpacity *
+            (isLightTheme ? 0.88 : 1) *
+            reveal *
+            (1 - exit),
           // The template palette IS the caption's colour: a primary field on
           // the reading side, a secondary wash opposite it, over the theme's
           // own vignette/base. Only the ink stays neutral.
-          background: isVerse
-            ? `
-          radial-gradient(ellipse 72% 130% at 50% -24%, color-mix(in oklch, #d9b86c 18%, transparent) 0%, transparent 72%),
-          linear-gradient(112deg, color-mix(in oklch, ${themePalette.base} 78%, rgba(9,7,5,0.95)) 0%, color-mix(in oklch, ${themePalette.vignette} 88%, #17120c) 52%, color-mix(in oklch, ${themePalette.base} 82%, #090807) 100%)`
-            : `
-          radial-gradient(ellipse 56% 150% at 100% 46%, color-mix(in oklch, ${themePalette.primary} 56%, transparent) 0%, transparent 74%),
-          radial-gradient(ellipse 82% 150% at 0% -12%, color-mix(in oklch, ${themePalette.secondary} 34%, transparent) 0%, transparent 70%),
-          linear-gradient(112deg, color-mix(in oklch, ${themePalette.base} 72%, rgba(4,7,14,0.94)) 0%, color-mix(in oklch, ${themePalette.vignette} 84%, ${themePalette.base}) 54%, color-mix(in oklch, ${themePalette.base} 88%, #0a0c13) 100%)`,
-          border: `${Math.max(1, 1.25 * px)}px solid color-mix(in oklch, ${isVerse ? "#d9b86c" : themePalette.highlight} ${isVerse ? 46 : 32}%, rgba(255,255,255,0.12))`,
-          boxShadow: `0 ${14 * px}px ${42 * px}px rgba(0,0,0,0.56), 0 ${3 * px}px ${8 * px}px rgba(0,0,0,0.3), inset 0 ${1 * px}px 0 rgba(255,255,255,0.13), inset 0 ${-1 * px}px 0 rgba(0,0,0,0.48), 0 0 ${22 * px}px color-mix(in oklch, ${themePalette.primary} 12%, transparent)`,
-          WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
-          backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(0.88) brightness(0.62)`,
+          background: surfaceBackground,
+          border: `${Math.max(1, 1.25 * px)}px solid color-mix(in oklch, ${isLightTheme ? themePalette.vignette : isVerse ? "#d9b86c" : themePalette.highlight} ${isLightTheme ? 28 : isVerse ? 46 : 32}%, rgba(255,255,255,0.3))`,
+          boxShadow: isLightTheme
+            ? `0 ${14 * px}px ${42 * px}px rgba(15,32,51,0.18), 0 ${3 * px}px ${8 * px}px rgba(15,32,51,0.1), inset 0 ${1 * px}px 0 rgba(255,255,255,0.78), inset 0 ${-1 * px}px 0 color-mix(in oklch, ${themePalette.vignette} 16%, transparent), 0 0 ${26 * px}px rgba(255,255,255,0.2)`
+            : `0 ${14 * px}px ${42 * px}px rgba(0,0,0,0.56), 0 ${3 * px}px ${8 * px}px rgba(0,0,0,0.3), inset 0 ${1 * px}px 0 rgba(255,255,255,0.13), inset 0 ${-1 * px}px 0 rgba(0,0,0,0.48), 0 0 ${22 * px}px color-mix(in oklch, ${themePalette.primary} 12%, transparent)`,
+          WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(${isLightTheme ? 0.94 : 0.88}) brightness(${isLightTheme ? 1.08 : 0.62})`,
+          backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(${isLightTheme ? 0.94 : 0.88}) brightness(${isLightTheme ? 1.08 : 0.62})`,
           WebkitMaskImage: mask,
           maskImage: mask,
         }}
@@ -542,7 +587,7 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
             transform: "skewX(-14deg)",
             background: `linear-gradient(90deg, transparent, color-mix(in oklch, ${themePalette.highlight} 72%, white), transparent)`,
             filter: `blur(${7 * px}px)`,
-            mixBlendMode: "screen",
+            mixBlendMode: isLightTheme ? "soft-light" : "screen",
           }}
         />
       </div>

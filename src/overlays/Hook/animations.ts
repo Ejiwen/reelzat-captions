@@ -26,7 +26,8 @@ const exitTiming = (fps: number, window: OverlayWindow, wordCount: number) => {
   return {
     stagger,
     duration,
-    startFrame: window.endFrame - pad - duration - Math.max(0, wordCount - 1) * stagger,
+    startFrame:
+      window.endFrame - pad - duration - Math.max(0, wordCount - 1) * stagger,
   };
 };
 
@@ -56,6 +57,8 @@ export const hookWordStyle = ({
   wordCount,
   window,
   reduced,
+  accentColor = palette.gold,
+  settledColor = palette.ink,
 }: {
   frame: number;
   fps: number;
@@ -63,6 +66,8 @@ export const hookWordStyle = ({
   wordCount: number;
   window: OverlayWindow;
   reduced?: boolean;
+  accentColor?: string;
+  settledColor?: string;
 }): React.CSSProperties => {
   const exit = exitTiming(fps, window, wordCount);
 
@@ -73,13 +78,18 @@ export const hookWordStyle = ({
       [0, 1],
       { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
     );
-    const exitOpacity = interpolate(frame, [exit.startFrame, window.endFrame], [1, 0], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    });
+    const exitOpacity = interpolate(
+      frame,
+      [exit.startFrame, window.endFrame],
+      [1, 0],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      },
+    );
     const goldPresence = Math.max(1 - entryOpacity, 1 - exitOpacity);
     return {
-      color: fadeToNeutralOklch(palette.gold, palette.ink, 1 - goldPresence),
+      color: fadeToNeutralOklch(accentColor, settledColor, 1 - goldPresence),
       opacity: entryOpacity * exitOpacity,
     };
   }
@@ -132,11 +142,11 @@ export const hookWordStyle = ({
   const goldPresence = Math.max(1 - entryColourProgress, exitProgress);
 
   return {
-    color: fadeToNeutralOklch(palette.gold, palette.ink, 1 - goldPresence),
+    color: fadeToNeutralOklch(accentColor, settledColor, 1 - goldPresence),
     opacity: entryOpacity * (1 - exitProgress),
     filter:
       goldPresence > 0.01
-        ? `drop-shadow(0 0 ${(3 + goldPresence * 7).toFixed(2)}px ${palette.gold})`
+        ? `drop-shadow(0 0 ${(3 + goldPresence * 7).toFixed(2)}px ${accentColor})`
         : undefined,
     transform: `translateY(${(entryY - EXIT_RISE_PX * exitProgress).toFixed(2)}px)`,
   };
@@ -161,7 +171,10 @@ export const shimmerStyle = ({
 
   const start = window.startFrame + atFps(20, fps);
   const nominalEnd = window.startFrame + atFps(110, fps);
-  const end = Math.max(start + 1, Math.min(nominalEnd, exitTiming(fps, window, wordCount).startFrame));
+  const end = Math.max(
+    start + 1,
+    Math.min(nominalEnd, exitTiming(fps, window, wordCount).startFrame),
+  );
   const progress = interpolate(frame, [start, end], [-100, 200], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",

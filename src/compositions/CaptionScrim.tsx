@@ -2,7 +2,8 @@ import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { overlaySurfaces } from "../design/tokens";
 import { enterLinear, exitLinear } from "../motion";
-import type { OverlayWindow } from "../overlays";
+import type { OverlaySplitWindow, OverlayWindow } from "../overlays";
+import { captionSplitPlacementAtFrame } from "../overlays/captionSplitPlacement";
 
 // Burn-mode only: a subtle gradient scrim behind BOTTOM captions, visible
 // only while one of them is — its opacity rides the caption's own enter/exit
@@ -12,7 +13,9 @@ import type { OverlayWindow } from "../overlays";
 export const CaptionScrim: React.FC<{
   windows: OverlayWindow[];
   bottomPct: number;
-}> = ({ windows, bottomPct }) => {
+  splitWindows?: OverlaySplitWindow[];
+  reduced?: boolean;
+}> = ({ windows, bottomPct, splitWindows = [], reduced }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -22,12 +25,21 @@ export const CaptionScrim: React.FC<{
       continue;
     }
     const ctx = { frame, fps, window };
-    opacity = Math.max(opacity, Math.min(enterLinear(ctx), 1 - exitLinear(ctx)));
+    opacity = Math.max(
+      opacity,
+      Math.min(enterLinear(ctx), 1 - exitLinear(ctx)),
+    );
   }
 
   if (opacity <= 0) {
     return null;
   }
+  const splitPlacement = captionSplitPlacementAtFrame({
+    frame,
+    fps,
+    windows: splitWindows,
+    reduced,
+  });
 
   return (
     <div
@@ -38,7 +50,7 @@ export const CaptionScrim: React.FC<{
         bottom: 0,
         height: `${bottomPct + 14}%`,
         backgroundImage: overlaySurfaces.captionScrimGradient,
-        opacity,
+        opacity: opacity * (1 - splitPlacement.mix),
         pointerEvents: "none",
       }}
     />

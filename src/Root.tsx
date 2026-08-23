@@ -18,10 +18,14 @@ import {
   CaptionRegularDemo,
   CaptionRegularVerseDemo,
 } from "./overlays/CaptionRegular/demo";
-import { CaptionShortDemo } from "./overlays/CaptionShort/demo";
+import {
+  CaptionShortDemo,
+  CaptionShortFeaturedDemo,
+} from "./overlays/CaptionShort/demo";
 import { HookDemo } from "./overlays/Hook/demo";
 import {
   HookBgCultureDemo,
+  HookBgFeaturedDemo,
   HookBgGeneralDemo,
   HookBgPoliticsDemo,
   HookBgReligionDemo,
@@ -29,6 +33,7 @@ import {
 } from "./overlays/HookBg/demo";
 import {
   HookEnergyCultureDemo,
+  HookEnergyFeaturedDemo,
   HookEnergyGeneralDemo,
   HookEnergyPoliticsDemo,
   HookEnergyReligionDemo,
@@ -36,7 +41,7 @@ import {
 } from "./overlays/HookEnergyBridge/demo";
 import { NameplateDemo } from "./overlays/Nameplate/demo";
 import { ProgressBarDemo } from "./overlays/ProgressBar/demo";
-import { OutroDemo } from "./overlays/Outro/demo";
+import { OutroDemo, OutroFeaturedDemo } from "./overlays/Outro/demo";
 import { outroConfig } from "./overlays/Outro/config";
 import { SafeAreaDemo } from "./overlays/SafeArea/demo";
 import {
@@ -164,6 +169,11 @@ export const RemotionRoot: React.FC = () => {
           {...DEMO}
         />
         <Composition
+          id="HookBg-Featured"
+          component={HookBgFeaturedDemo}
+          {...DEMO}
+        />
+        <Composition
           id="HookEnergyBridge-Demo"
           component={HookEnergyGeneralDemo}
           {...DEMO}
@@ -194,8 +204,18 @@ export const RemotionRoot: React.FC = () => {
           {...DEMO}
         />
         <Composition
+          id="HookEnergy-Featured"
+          component={HookEnergyFeaturedDemo}
+          {...DEMO}
+        />
+        <Composition
           id="CaptionShort-Demo"
           component={CaptionShortDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="CaptionShort-Featured"
+          component={CaptionShortFeaturedDemo}
           {...DEMO}
         />
         <Composition
@@ -225,6 +245,11 @@ export const RemotionRoot: React.FC = () => {
           {...DEMO}
         />
         <Composition id="Outro-Demo" component={OutroDemo} {...DEMO} />
+        <Composition
+          id="Outro-Featured"
+          component={OutroFeaturedDemo}
+          {...DEMO}
+        />
         <Composition id="SafeArea-Demo" component={SafeAreaDemo} {...DEMO} />
       </Folder>
 

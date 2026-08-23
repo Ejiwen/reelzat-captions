@@ -12,17 +12,46 @@ import { resolveReelPackage } from "../src/ingest/resolve";
 // ---------------------------------------------------------------------------
 // Theme catalogue
 
-test("exactly five semantic themes exist, each with a complete palette", () => {
+test("six semantic themes exist, each with a complete palette", () => {
   assert.deepEqual(
     [...HOOK_BG_THEMES],
-    ["politics", "religion", "culture", "general", "social"],
+    ["politics", "religion", "culture", "general", "social", "featured"],
   );
   for (const theme of HOOK_BG_THEMES) {
     const palette = hookBgPalettes[theme];
-    for (const key of ["base", "primary", "secondary", "highlight", "vignette"] as const) {
-      assert.match(palette[key], /^#[0-9A-Fa-f]{6}$/, `${theme}.${key} must be a hex colour`);
+    for (const key of [
+      "base",
+      "primary",
+      "secondary",
+      "highlight",
+      "vignette",
+    ] as const) {
+      assert.match(
+        palette[key],
+        /^#[0-9A-Fa-f]{6}$/,
+        `${theme}.${key} must be a hex colour`,
+      );
     }
+    for (const key of ["foreground", "mutedForeground", "accent"] as const) {
+      assert.match(
+        palette[key],
+        /^#[0-9A-Fa-f]{6}$/,
+        `${theme}.${key} must be a hex colour`,
+      );
+    }
+    assert.ok(palette.surface === "dark" || palette.surface === "light");
   }
+  assert.equal(hookBgPalettes.featured.surface, "light");
+  assert.notEqual(
+    hookBgPalettes.featured.foreground,
+    hookBgPalettes.general.foreground,
+    "featured must carry dark ink instead of inheriting the default white ink",
+  );
+  assert.equal(
+    hookBgPalettes.featured.accent,
+    "#7A315D",
+    "featured emphasis needs a dark chromatic accent over the pearl surface",
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -31,6 +60,7 @@ test("exactly five semantic themes exist, each with a complete palette", () => {
 test("parseHookBgTheme accepts known themes and rejects everything else", () => {
   assert.equal(parseHookBgTheme("politics"), "politics");
   assert.equal(parseHookBgTheme("social"), "social");
+  assert.equal(parseHookBgTheme("featured"), "featured");
   assert.equal(parseHookBgTheme("neon"), null); // unknown string
   assert.equal(parseHookBgTheme("POLITICS"), null); // case-sensitive contract
   assert.equal(parseHookBgTheme(undefined), null);
@@ -64,7 +94,10 @@ test("an unknown explicit theme degrades to the keyword fallback", () => {
 });
 
 test("keyword fallback maps Arabic editorial registers", () => {
-  assert.equal(keywordThemeFor("قبل ٣٠ عاماً تنبّأ بمصير حكومة السودان"), "politics");
+  assert.equal(
+    keywordThemeFor("قبل ٣٠ عاماً تنبّأ بمصير حكومة السودان"),
+    "politics",
+  );
   assert.equal(keywordThemeFor("آية من القرآن غيّرت حياته"), "religion");
   assert.equal(keywordThemeFor("بيت شعرٍ خلّده التاريخ"), "culture");
   assert.equal(keywordThemeFor("قصة عائلة بدأت من رسالة"), "social");
@@ -73,7 +106,10 @@ test("keyword fallback maps Arabic editorial registers", () => {
 
 test("no explicit theme and no keyword match → configured default", () => {
   assert.equal(
-    resolveHookBgTheme({ text: "لقطة لا تُنسى في مباراة الأمس", fallback: "general" }),
+    resolveHookBgTheme({
+      text: "لقطة لا تُنسى في مباراة الأمس",
+      fallback: "general",
+    }),
     "general",
   );
   assert.equal(resolveHookBgTheme({ fallback: "culture" }), "culture");
@@ -100,8 +136,18 @@ const packageWith = (hook: Record<string, unknown>) =>
         schemaVersion: 1,
         kind: "reel",
         clipId: "reel-x",
-        source: { episodeTitle: "حلقة", channel: "قناة", language: "ar", direction: "rtl" },
-        hook: { text: "خطاف", position: "top", display: { start: 0, end: 3 }, ...hook },
+        source: {
+          episodeTitle: "حلقة",
+          channel: "قناة",
+          language: "ar",
+          direction: "rtl",
+        },
+        hook: {
+          text: "خطاف",
+          position: "top",
+          display: { start: 0, end: 3 },
+          ...hook,
+        },
         captions: [],
       },
     },

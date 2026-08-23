@@ -9,7 +9,6 @@ import {
   useVideoConfig,
 } from "remotion";
 import { fontFamily, fontWeights } from "../../design/fonts";
-import { palette } from "../../design/tokens";
 import { hookConfig } from "../Hook/config";
 import {
   hookBgPalettes,
@@ -72,6 +71,7 @@ export const Outro: React.FC<OutroProps> = ({
     parseHookBgTheme(hookConfig.background.themeOverride) ??
     hookConfig.background.defaultTheme;
   const themePalette = hookBgPalettes[resolvedTheme];
+  const isLightTheme = themePalette.surface === "light";
   const px = width / 1080;
   const coverFrames = atFps(config.coverFrames, fps);
   const cover = reduced
@@ -105,7 +105,8 @@ export const Outro: React.FC<OutroProps> = ({
   const logoX = logoTarget.x;
   const logoStartY = logoTarget.y + height * 0.08;
   const logoY = logoStartY + (logoTarget.y - logoStartY) * logoTravel;
-  const logoScale = config.logoStartScale + (1 - config.logoStartScale) * logoTravel;
+  const logoScale =
+    config.logoStartScale + (1 - config.logoStartScale) * logoTravel;
   const lightDrift = Math.sin(frame * 0.022);
   const counterDrift = Math.cos(frame * 0.018);
 
@@ -123,9 +124,16 @@ export const Outro: React.FC<OutroProps> = ({
   });
   const exit = interpolate(
     frame,
-    [Math.max(0, durationInFrames - atFps(config.exitFrames, fps)), durationInFrames - 1],
+    [
+      Math.max(0, durationInFrames - atFps(config.exitFrames, fps)),
+      durationInFrames - 1,
+    ],
     [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.in(Easing.quad) },
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.quad),
+    },
   );
 
   return (
@@ -150,7 +158,9 @@ export const Outro: React.FC<OutroProps> = ({
       </svg>
       <AbsoluteFill
         style={{
-          background: `radial-gradient(ellipse 95% 75% at 50% 38%, #121827 0%, ${config.backgroundColor} 58%, #020307 100%)`,
+          background: isLightTheme
+            ? `radial-gradient(ellipse 48% 42% at 24% 18%, ${themePalette.highlight} 0%, transparent 72%), radial-gradient(ellipse 58% 54% at 78% 76%, ${themePalette.secondary} 0%, transparent 76%), linear-gradient(145deg, ${themePalette.base} 0%, ${themePalette.primary} 52%, color-mix(in oklch, ${themePalette.base} 86%, ${themePalette.secondary}) 100%)`
+            : `radial-gradient(ellipse 95% 75% at 50% 38%, #121827 0%, ${config.backgroundColor} 58%, #020307 100%)`,
         }}
       />
 
@@ -168,7 +178,7 @@ export const Outro: React.FC<OutroProps> = ({
           opacity: cover * config.themeLightOpacity,
           background: `radial-gradient(ellipse, ${themePalette.primary} 0%, color-mix(in oklch, ${themePalette.secondary} 58%, transparent) 34%, transparent 72%)`,
           filter: `blur(${80 * px}px)`,
-          mixBlendMode: "screen",
+          mixBlendMode: isLightTheme ? "soft-light" : "screen",
         }}
       />
       <div
@@ -183,7 +193,7 @@ export const Outro: React.FC<OutroProps> = ({
           opacity: cover * config.themeLightOpacity * 0.72,
           background: `radial-gradient(ellipse, ${themePalette.secondary} 0%, transparent 70%)`,
           filter: `blur(${96 * px}px)`,
-          mixBlendMode: "screen",
+          mixBlendMode: isLightTheme ? "soft-light" : "screen",
         }}
       />
 
@@ -196,26 +206,31 @@ export const Outro: React.FC<OutroProps> = ({
           width: "18%",
           height: "145%",
           transform: "rotate(18deg)",
-          opacity: Math.sin(cover * Math.PI) * config.ambientLightOpacity,
-          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent)",
+          opacity:
+            Math.sin(cover * Math.PI) *
+            config.ambientLightOpacity *
+            (isLightTheme ? 1.55 : 1),
+          background: `linear-gradient(90deg, transparent, rgba(255,255,255,${isLightTheme ? 0.72 : 0.16}), transparent)`,
           filter: `blur(${28 * px}px)`,
           mixBlendMode: "screen",
         }}
       />
 
-      <div style={{
-        position: "absolute",
-        left: logoTarget.x,
-        top: logoTarget.y,
-        width: logoSize * 2.4,
-        height: logoSize * 2.4,
-        transform: `translate(-50%, -50%) scale(${(0.55 + cover * 0.45).toFixed(4)})`,
-        borderRadius: "50%",
-        opacity: cover * logoTravel * config.glowOpacity * 0.72,
-        background: `radial-gradient(circle, color-mix(in oklch, ${themePalette.highlight} 32%, transparent) 0%, color-mix(in oklch, ${themePalette.primary} 20%, transparent) 42%, transparent 72%)`,
-        filter: `blur(${24 * px}px)`,
-        mixBlendMode: "screen",
-      }} />
+      <div
+        style={{
+          position: "absolute",
+          left: logoTarget.x,
+          top: logoTarget.y,
+          width: logoSize * 2.4,
+          height: logoSize * 2.4,
+          transform: `translate(-50%, -50%) scale(${(0.55 + cover * 0.45).toFixed(4)})`,
+          borderRadius: "50%",
+          opacity: cover * logoTravel * config.glowOpacity * 0.72,
+          background: `radial-gradient(circle, color-mix(in oklch, ${themePalette.highlight} 32%, transparent) 0%, color-mix(in oklch, ${themePalette.primary} 20%, transparent) 42%, transparent 72%)`,
+          filter: `blur(${24 * px}px)`,
+          mixBlendMode: "screen",
+        }}
+      />
 
       {[1, -1].map((direction, index) => (
         <div
@@ -230,8 +245,10 @@ export const Outro: React.FC<OutroProps> = ({
             border: `${Math.max(1, 2 * px)}px solid color-mix(in oklch, ${themePalette.highlight} ${index === 0 ? 44 : 28}%, transparent)`,
             opacity: cover * logoTravel * config.orbitOpacity,
             transform: `translate(-50%, -50%) rotate(${(direction * (18 + frame * (index === 0 ? 0.16 : 0.1))).toFixed(2)}deg)`,
-            maskImage: "linear-gradient(90deg, transparent 4%, black 36%, black 64%, transparent 96%)",
-            WebkitMaskImage: "linear-gradient(90deg, transparent 4%, black 36%, black 64%, transparent 96%)",
+            maskImage:
+              "linear-gradient(90deg, transparent 4%, black 36%, black 64%, transparent 96%)",
+            WebkitMaskImage:
+              "linear-gradient(90deg, transparent 4%, black 36%, black 64%, transparent 96%)",
           }}
         />
       ))}
@@ -245,7 +262,9 @@ export const Outro: React.FC<OutroProps> = ({
           height: logoSize,
           transform: `translate(-50%, -50%) scale(${logoScale.toFixed(4)})`,
           opacity: Math.min(1, cover * 1.35) * (0.78 + logoTravel * 0.22),
-          filter: `url(#outro-logo-luma-key) drop-shadow(0 ${10 * px}px ${28 * px}px rgba(0,0,0,0.48)) drop-shadow(0 0 ${22 * px}px color-mix(in oklch, ${themePalette.highlight} 22%, transparent))`,
+          filter: isLightTheme
+            ? `url(#outro-logo-luma-key) brightness(0) saturate(100%) opacity(0.88) drop-shadow(0 ${8 * px}px ${18 * px}px rgba(16,32,51,0.22))`
+            : `url(#outro-logo-luma-key) drop-shadow(0 ${10 * px}px ${28 * px}px rgba(0,0,0,0.48)) drop-shadow(0 0 ${22 * px}px color-mix(in oklch, ${themePalette.highlight} 22%, transparent))`,
         }}
       >
         <OffthreadVideo
@@ -277,9 +296,11 @@ export const Outro: React.FC<OutroProps> = ({
             fontSize: config.sloganFontSizePx * px,
             fontWeight: fontWeights.regular,
             lineHeight: sloganLineHeight,
-            color: `color-mix(in oklch, ${palette.ink} 86%, ${themePalette.highlight})`,
+            color: themePalette.foreground,
             letterSpacing: "0.01em",
-            textShadow: `0 ${2 * px}px ${14 * px}px ${themePalette.vignette}`,
+            textShadow: isLightTheme
+              ? `0 1px 0 rgba(255,255,255,0.92), 0 ${2 * px}px ${12 * px}px color-mix(in oklch, ${themePalette.vignette} 28%, transparent)`
+              : `0 ${2 * px}px ${14 * px}px ${themePalette.vignette}`,
             ...sloganStyle,
           }}
         >
@@ -293,7 +314,7 @@ export const Outro: React.FC<OutroProps> = ({
             fontSize: config.websiteFontSizePx * px,
             fontWeight: fontWeights.medium,
             lineHeight: websiteLineHeight,
-            color: `color-mix(in oklch, ${palette.ink} 68%, ${themePalette.highlight})`,
+            color: themePalette.mutedForeground,
             letterSpacing: "0.09em",
             textShadow: `0 0 ${12 * px}px color-mix(in oklch, ${themePalette.highlight} 20%, transparent)`,
             ...websiteStyle,

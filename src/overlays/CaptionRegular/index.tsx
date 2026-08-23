@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { useVideoConfig } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 import { overlayType } from "../../design/tokens";
 import { tokenizeLine } from "../../schema/captions";
 import { CaptionLines, type AuthoredWordFrameTiming } from "../CaptionLines";
@@ -18,6 +18,7 @@ import {
   captionRegularDefaultAnimation,
   captionRegularVerseAnimation,
 } from "./animations";
+import { captionPlacementStyle } from "../captionSplitPlacement";
 
 export type CaptionRegularProps = OverlayBaseProps & {
   data: {
@@ -41,12 +42,14 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
   animation,
   safeArea,
   textZone,
+  splitWindows = [],
   fontScale = 1,
   stagger = true,
   reduced,
   theme,
 }) => {
-  const { width, height } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
   const px = width / 1080;
   const resolvedSafeArea = safeArea ?? DEFAULT_SAFE_AREA;
   const baseSize = width * overlayType.captionRegularSizeFactor * fontScale;
@@ -96,6 +99,18 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
       }),
     [data.lines, data.verse, baseSize, maxLineWidth, maxTextHeight],
   );
+  const placementStyle =
+    bottomOffsetPx !== undefined && splitWindows.length > 0
+      ? captionPlacementStyle({
+          frame,
+          fps,
+          height,
+          safeArea: resolvedSafeArea,
+          bottomOffsetPx,
+          windows: splitWindows,
+          reduced,
+        })
+      : undefined;
 
   return (
     <OverlayRoot
@@ -106,6 +121,7 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
       safeArea={resolvedSafeArea}
       textZone={textZone}
       bottomOffsetPx={bottomOffsetPx}
+      placementStyle={placementStyle}
       reduced={reduced}
       trailOnEntry={stagger && !data.words}
     >
@@ -115,6 +131,7 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
         position={position}
         textZone={textZone}
         safeArea={resolvedSafeArea}
+        splitWindows={splitWindows}
         theme={theme}
         reduced={reduced}
         variant={data.verse ? "verse" : "standard"}

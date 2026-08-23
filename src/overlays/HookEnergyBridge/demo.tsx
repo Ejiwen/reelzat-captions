@@ -19,6 +19,7 @@ const demoHooks: Record<HookBgTheme, string> = {
   culture: "بيتُ شعرٍ واحد خلّده التاريخ",
   general: "أربع دول خرجت من دولة واحدة",
   social: "قصة عائلة بدأت من رسالة واحدة",
+  featured: "لحظة استثنائية تستحق أن تُروى",
 };
 
 const Stage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -61,3 +62,4 @@ export const HookEnergyPoliticsDemo = themeDemo("politics");
 export const HookEnergyReligionDemo = themeDemo("religion");
 export const HookEnergyCultureDemo = themeDemo("culture");
 export const HookEnergySocialDemo = themeDemo("social");
+export const HookEnergyFeaturedDemo = themeDemo("featured");

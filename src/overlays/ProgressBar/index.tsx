@@ -46,12 +46,23 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
   const gradientId = useId().replaceAll(":", "");
+  const logoFilterId = `${gradientId}-logo-luma`;
   const config = { ...progressBarConfig, ...overrides };
   const resolvedTheme =
     parseHookBgTheme(theme) ??
     parseHookBgTheme(hookConfig.background.themeOverride) ??
     hookConfig.background.defaultTheme;
   const themePalette = hookBgPalettes[resolvedTheme];
+  const isLightTheme = themePalette.surface === "light";
+  const trackColor = isLightTheme ? themePalette.foreground : config.trackColor;
+  const fillStart = isLightTheme ? themePalette.accent : config.fillColorStart;
+  const fillEnd = isLightTheme ? themePalette.vignette : config.fillColorEnd;
+  const indicatorColor = isLightTheme
+    ? themePalette.foreground
+    : config.indicatorColor;
+  const indicatorBorderColor = isLightTheme
+    ? themePalette.highlight
+    : config.indicatorBorderColor;
 
   if (!config.enabled) {
     return null;
@@ -112,7 +123,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     : interactionWindows.reduce((strongest, window) => {
         const entry = interpolate(
           frame,
-          [window.startFrame, window.startFrame + pulseFrames * 0.38, window.startFrame + pulseFrames],
+          [
+            window.startFrame,
+            window.startFrame + pulseFrames * 0.38,
+            window.startFrame + pulseFrames,
+          ],
           [0, 1, 0],
           { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
         );
@@ -142,6 +157,16 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         ...visibility,
       }}
     >
+      {isLightTheme ? (
+        <svg aria-hidden width="0" height="0" style={{ position: "absolute" }}>
+          <filter id={logoFilterId} colorInterpolationFilters="sRGB">
+            <feColorMatrix
+              type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0.2126 0.7152 0.0722 0 -0.06"
+            />
+          </filter>
+        </svg>
+      ) : null}
       <div
         style={{
           position: "absolute",
@@ -150,103 +175,109 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           transformOrigin: "center",
         }}
       >
-      <div
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: "50%",
-          width: logoDiscSize,
-          height: logoDiscSize,
-          transform: "translate(-50%, -50%)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          borderRadius: "50%",
-          background: `
-            radial-gradient(circle at 34% 24%, color-mix(in oklch, ${themePalette.highlight} 24%, transparent) 0%, transparent 42%),
-            radial-gradient(circle at 76% 82%, color-mix(in oklch, ${themePalette.secondary} 58%, transparent) 0%, transparent 60%),
-            linear-gradient(145deg, ${themePalette.primary} 0%, ${themePalette.base} 58%, ${themePalette.vignette} 100%)`,
-          boxShadow: `
-            inset 0 1px 0 color-mix(in oklch, ${themePalette.highlight} 32%, transparent),
-            inset 0 0 ${24 * scale}px color-mix(in oklch, ${themePalette.vignette} 72%, transparent),
-            0 0 ${18 * scale}px color-mix(in oklch, ${themePalette.primary} 24%, transparent)`,
-        }}
-      >
-        <Img
-          src={staticFile(config.staticLogoSrc)}
+        <div
           style={{
             position: "absolute",
-            width: `${config.logoSizePct}%`,
-            height: `${config.logoSizePct}%`,
-            objectFit: "contain",
-            opacity: staticLogoOpacity,
-            // Logo media is authored over black. Screen blending preserves
-            // its white/gold strokes while revealing the editorial theme
-            // gradient underneath instead of showing a black square.
-            mixBlendMode: "screen",
+            left: "50%",
+            top: "50%",
+            width: logoDiscSize,
+            height: logoDiscSize,
+            transform: "translate(-50%, -50%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            borderRadius: "50%",
+            background: `
+            radial-gradient(circle at 34% 24%, color-mix(in oklch, ${themePalette.highlight} 24%, transparent) 0%, transparent 42%),
+            radial-gradient(circle at 76% 82%, color-mix(in oklch, ${themePalette.secondary} 58%, transparent) 0%, transparent 60%),
+            linear-gradient(145deg, ${themePalette.highlight} 0%, ${themePalette.base} 46%, ${isLightTheme ? themePalette.secondary : themePalette.vignette} 100%)`,
+            boxShadow: `
+            inset 0 1px 0 color-mix(in oklch, ${themePalette.highlight} 32%, transparent),
+            inset 0 0 ${24 * scale}px color-mix(in oklch, ${themePalette.vignette} ${isLightTheme ? 22 : 72}%, transparent),
+            0 0 ${18 * scale}px color-mix(in oklch, ${themePalette.primary} 24%, transparent)`,
           }}
-        />
-        <Sequence durationInFrames={animatedLogoDurationFrames} layout="none">
-          <OffthreadVideo
-            src={staticFile(config.animatedLogoSrc)}
-            muted
-            pauseWhenBuffering
+        >
+          <Img
+            src={staticFile(config.staticLogoSrc)}
             style={{
               position: "absolute",
               width: `${config.logoSizePct}%`,
               height: `${config.logoSizePct}%`,
               objectFit: "contain",
-              opacity: animatedLogoOpacity,
-              mixBlendMode: "screen",
+              opacity: staticLogoOpacity,
+              // Logo media is authored over black. Screen blending preserves
+              // its white/gold strokes while revealing the editorial theme
+              // gradient underneath instead of showing a black square.
+              mixBlendMode: isLightTheme ? "normal" : "screen",
+              filter: isLightTheme
+                ? `url(#${logoFilterId}) brightness(0) saturate(100%) opacity(0.86)`
+                : undefined,
             }}
           />
-        </Sequence>
-      </div>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={config.fillColorStart} />
-            <stop offset="100%" stopColor={config.fillColorEnd} />
-          </linearGradient>
-        </defs>
+          <Sequence durationInFrames={animatedLogoDurationFrames} layout="none">
+            <OffthreadVideo
+              src={staticFile(config.animatedLogoSrc)}
+              muted
+              pauseWhenBuffering
+              style={{
+                position: "absolute",
+                width: `${config.logoSizePct}%`,
+                height: `${config.logoSizePct}%`,
+                objectFit: "contain",
+                opacity: animatedLogoOpacity,
+                mixBlendMode: isLightTheme ? "normal" : "screen",
+                filter: isLightTheme
+                  ? `url(#${logoFilterId}) brightness(0) saturate(100%) opacity(0.86)`
+                  : undefined,
+              }}
+            />
+          </Sequence>
+        </div>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={fillStart} />
+              <stop offset="100%" stopColor={fillEnd} />
+            </linearGradient>
+          </defs>
 
-        <circle
-          cx={center}
-          cy={center}
-          r={radius}
-          fill="none"
-          stroke={config.trackColor}
-          strokeOpacity={config.trackOpacity}
-          strokeWidth={trackWidth}
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r={radius}
-          fill="none"
-          stroke={`url(#${gradientId})`}
-          strokeWidth={trackWidth}
-          strokeLinecap="round"
-          strokeDasharray={`${progress * circumference} ${circumference}`}
-          transform={`rotate(-90 ${center} ${center})`}
-          style={{
-            filter: `drop-shadow(0 0 ${4 * scale}px color-mix(in oklch, ${config.fillColorEnd} 48%, transparent))`,
-          }}
-        />
+          <circle
+            cx={center}
+            cy={center}
+            r={radius}
+            fill="none"
+            stroke={trackColor}
+            strokeOpacity={config.trackOpacity}
+            strokeWidth={trackWidth}
+          />
+          <circle
+            cx={center}
+            cy={center}
+            r={radius}
+            fill="none"
+            stroke={`url(#${gradientId})`}
+            strokeWidth={trackWidth}
+            strokeLinecap="round"
+            strokeDasharray={`${progress * circumference} ${circumference}`}
+            transform={`rotate(-90 ${center} ${center})`}
+            style={{
+              filter: `drop-shadow(0 0 ${4 * scale}px color-mix(in oklch, ${fillEnd} 48%, transparent))`,
+            }}
+          />
 
-        <circle
-          cx={indicatorX}
-          cy={indicatorY}
-          r={indicatorSize / 2}
-          fill={config.indicatorColor}
-          stroke={config.indicatorBorderColor}
-          strokeWidth={borderWidth}
-          style={{
-            filter: `drop-shadow(0 0 ${8 * scale}px color-mix(in oklch, ${config.indicatorGlowColor} ${Math.round(Math.min(1, Math.max(0, config.indicatorGlowOpacity)) * 100)}%, transparent))`,
-          }}
-        />
-      </svg>
+          <circle
+            cx={indicatorX}
+            cy={indicatorY}
+            r={indicatorSize / 2}
+            fill={indicatorColor}
+            stroke={indicatorBorderColor}
+            strokeWidth={borderWidth}
+            style={{
+              filter: `drop-shadow(0 0 ${8 * scale}px color-mix(in oklch, ${isLightTheme ? themePalette.vignette : config.indicatorGlowColor} ${Math.round(Math.min(1, Math.max(0, config.indicatorGlowOpacity)) * 100)}%, transparent))`,
+            }}
+          />
+        </svg>
       </div>
       {pulse > 0.002 ? (
         <div
@@ -254,11 +285,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
             position: "absolute",
             inset: -18 * scale,
             borderRadius: "50%",
-            border: `${Math.max(2, 4 * scale)}px solid color-mix(in oklch, ${config.indicatorColor} 82%, ${config.fillColorEnd})`,
-            boxShadow: `0 0 ${30 * scale}px ${10 * scale}px color-mix(in oklch, ${config.indicatorColor} 62%, transparent)`,
+            border: `${Math.max(2, 4 * scale)}px solid color-mix(in oklch, ${indicatorColor} 82%, ${fillEnd})`,
+            boxShadow: `0 0 ${30 * scale}px ${10 * scale}px color-mix(in oklch, ${indicatorColor} 62%, transparent)`,
             opacity: pulse * captionEnergyConfig.circlePulseGlowOpacity,
             transform: `scale(${(0.9 + pulse * 0.22).toFixed(4)})`,
-            mixBlendMode: "screen",
+            mixBlendMode: isLightTheme ? "normal" : "screen",
           }}
         />
       ) : null}

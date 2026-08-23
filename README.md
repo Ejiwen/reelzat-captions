@@ -80,7 +80,9 @@ public/reels/
 - Every authored caption resolves to the **bottom caption band**
   (`CAPTION_BAND_POSITION`), whatever `authoring.json` says: one-line and
   two-line captions share one reading position, directly above the ProgressBar
-  ring. The overlap check uses that effective position, so two captions may
+  ring. During a director-timed full-width 50/50 top/bottom split, that same
+  caption card moves to the panel seam and settles back when the split ends.
+  The overlap check uses the effective bottom position, so two captions may
   never share time even if they were authored at opposite ends of the frame.
 - Media metadata (width/height/fps/duration) comes **from the sidecar, never
   from probing the video** — batch renders must not re-parse every file.
@@ -101,7 +103,7 @@ under **Components/** in Studio so it can be previewed and tuned in isolation.
 | Component | Role |
 | --- | --- |
 | `Hook/` | The opening statement — largest type, gold word cascade in/out, one shimmer pass, accent underline. Reads within its first 3 words. Placement/size/hold live in `Hook/config.ts`. |
-| `HookBg/` | Solid-gradient motion background behind the hook: five editorial themes (`politics`, `religion`, `culture`, `general`, `social`), layered colour fields + one entrance light sweep, exit synced to the hook. Theme via Studio prop, per-reel `hook.backgroundTheme`, or keyword fallback. |
+| `HookBg/` | Solid-gradient motion background behind the hook: six editorial themes (`politics`, `religion`, `culture`, `general`, `social`, `featured`), layered colour fields + one entrance light sweep, exit synced to the hook. `featured` is a light pearl treatment with semantic dark ink. Theme via Studio prop, per-reel `hook.backgroundTheme`, or keyword fallback. |
 | `HookEnergyBridge/` | The brand connection: the Wazin circle emits one restrained themed pulse, a soft light field travels a bowed path and resolves into the HookBg; a quieter return pulse plays on exit. Shares the ProgressBar's exact geometry; invisible during the reading hold. |
 | `CaptionShort/` | One big authored line, fitted from measured word widths, never wrapped. Word-stagger entrance. |
 | `CaptionLong/` | Two balanced lines at one shared font size, flat word-stagger across the break; re-balances (to three lines if that buys bigger type) when the authored break would shrink the block too far. |

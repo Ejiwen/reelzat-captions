@@ -28,6 +28,7 @@ import {
   type Sidecar,
   type TextDirection,
 } from "./schemas";
+import type { OverlaySplitWindow } from "../overlays/types";
 
 // ---------------------------------------------------------------------------
 // Frames. Windows arrive as clip-relative seconds; every frame number in the
@@ -113,6 +114,7 @@ export type ReelPackage = {
     captions: ResolvedCaptions | null;
   };
   director: Director | null;
+  splitScreenWindows: OverlaySplitWindow[];
 };
 
 export type ReelPackageInput = {
@@ -431,7 +433,12 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
   const segmentFaces = facesFromSegments(sidecar.segments);
   if (segmentFaces.length > 0) {
     if (director === null) {
-      director = { faces: segmentFaces, textSafeZones: [], cuts: [] };
+      director = {
+        faces: segmentFaces,
+        textSafeZones: [],
+        cuts: [],
+        splitWindows: [],
+      };
     } else if (director.faces.length === 0) {
       director = { ...director, faces: segmentFaces };
     }
@@ -442,6 +449,19 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
   }
 
   const fps = sidecar.fps;
+  const durationInFrames = secondsToFrames(sidecar.durationInSeconds, fps);
+  const splitScreenWindows: OverlaySplitWindow[] = (
+    director?.splitWindows ?? []
+  )
+    .map((window) => ({
+      startFrame: secondsToFrames(window.startMs / 1000, fps),
+      endFrame: Math.min(
+        durationInFrames,
+        secondsToFrames(window.endMs / 1000, fps),
+      ),
+      centerYPct: window.centerYPct,
+    }))
+    .filter((window) => window.endFrame > window.startFrame);
   const authored: ResolvedAuthoring | null = authoring
     ? {
         kind: authoring.kind,
@@ -487,7 +507,7 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
       width: sidecar.width,
       height: sidecar.height,
       fps,
-      durationInFrames: secondsToFrames(sidecar.durationInSeconds, fps),
+      durationInFrames,
       videoSrc: `${input.packageDir}/${sidecar.video}`,
       audioSrc: sidecar.audio ? `${input.packageDir}/${sidecar.audio}` : null,
     },
@@ -495,5 +515,6 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
     authored,
     asr: { words, captions: asrCaptions },
     director,
+    splitScreenWindows,
   };
 };

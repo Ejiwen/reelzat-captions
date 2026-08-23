@@ -9,6 +9,11 @@ export type OverlayWindow = {
   endFrame: number;
 };
 
+export type OverlaySplitWindow = OverlayWindow & {
+  // The seam between the full-width top and bottom panels.
+  centerYPct: number;
+};
+
 export type OverlayPosition = "top" | "bottom";
 
 export type TextDirection = "rtl" | "ltr";
@@ -22,7 +27,11 @@ export type OverlaySafeArea = {
   sidePct: number;
 };
 
-export const DEFAULT_SAFE_AREA: OverlaySafeArea = { topPct: 14, bottomPct: 20, sidePct: 7 };
+export const DEFAULT_SAFE_AREA: OverlaySafeArea = {
+  topPct: 14,
+  bottomPct: 20,
+  sidePct: 7,
+};
 
 // A director-provided text-safe rectangle (percent of frame). When present it
 // wins over the generic band — the director knows where the faces are.
@@ -46,6 +55,9 @@ export type OverlayBaseProps = {
   safeArea?: OverlaySafeArea;
   // Director text-safe zone — preferred over the band when provided.
   textZone?: OverlayTextZone | null;
+  // Full-width 50/50 top/bottom split-screen intervals. Caption overlays use
+  // these to sit on the seam instead of covering either speaker's face.
+  splitWindows?: OverlaySplitWindow[];
   fontScale?: number;
   // Collapse movement to plain cross-fades.
   reduced?: boolean;

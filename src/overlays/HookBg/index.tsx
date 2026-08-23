@@ -6,7 +6,11 @@ import {
   hookBgSweepStyle,
   type HookBgMotionCtx,
 } from "./animations";
-import { parseHookBgTheme, type HookBgPalette, type HookBgTheme } from "./themes";
+import {
+  parseHookBgTheme,
+  type HookBgPalette,
+  type HookBgTheme,
+} from "./themes";
 import type { HookBgConfig } from "./types";
 
 export type HookBgProps = {
@@ -60,7 +64,13 @@ const shapeContainerStyle = (
         maskImage:
           "linear-gradient(to bottom, transparent 0%, black 17%, black 83%, transparent 100%)",
         // Flat base tone; the mask supplies the falloff.
-        background: `color-mix(in oklch, ${palette.base} ${basePct}%, transparent)`,
+        background:
+          palette.surface === "light"
+            ? `radial-gradient(ellipse 36% 120% at 18% 28%, color-mix(in oklch, ${palette.highlight} 48%, transparent), transparent 74%),
+               radial-gradient(ellipse 42% 130% at 82% 72%, color-mix(in oklch, ${palette.secondary} 38%, transparent), transparent 76%),
+               radial-gradient(ellipse 34% 95% at 68% 4%, color-mix(in oklch, ${palette.accent} 10%, transparent), transparent 68%),
+               linear-gradient(112deg, color-mix(in oklch, ${palette.highlight} 70%, transparent) 0%, color-mix(in oklch, ${palette.primary} 62%, transparent) 34%, color-mix(in oklch, ${palette.secondary} 54%, transparent) 68%, color-mix(in oklch, ${palette.base} ${Math.max(64, basePct)}%, transparent) 100%)`
+            : `color-mix(in oklch, ${palette.base} ${basePct}%, transparent)`,
       }
     : {
         left: "50%",
@@ -75,13 +85,16 @@ const shapeContainerStyle = (
         maskImage:
           "radial-gradient(ellipse at center, black 0%, black 52%, rgba(0,0,0,0.85) 66%, transparent 88%)",
         background: `radial-gradient(ellipse at center,
-          color-mix(in oklch, ${palette.base} ${basePct}%, transparent) 0%,
+          color-mix(in oklch, ${palette.base} ${palette.surface === "light" ? Math.max(90, basePct) : basePct}%, transparent) 0%,
           color-mix(in oklch, ${palette.base} ${Math.round(basePct * 0.85)}%, transparent) 48%,
           color-mix(in oklch, ${palette.base} ${Math.round(basePct * 0.45)}%, transparent) 68%,
           transparent 88%)`,
       };
 
-const vignetteStyle = (config: HookBgConfig, palette: HookBgPalette): React.CSSProperties =>
+const vignetteStyle = (
+  config: HookBgConfig,
+  palette: HookBgPalette,
+): React.CSSProperties =>
   config.shape === "band"
     ? {
         // Reinforce the top/bottom feather for text separation.
@@ -115,9 +128,11 @@ export const HookBg: React.FC<HookBgProps> = ({
     return null;
   }
 
+  const resolvedTheme = parseHookBgTheme(theme) ?? config.defaultTheme;
   const palette =
-    config.themes[parseHookBgTheme(theme) ?? config.defaultTheme] ??
+    config.themes[resolvedTheme] ??
     config.themes[config.defaultTheme];
+  const pearl = resolvedTheme === "featured";
 
   const ctx: HookBgMotionCtx = {
     frame,
@@ -129,7 +144,9 @@ export const HookBg: React.FC<HookBgProps> = ({
     reduced,
   };
 
-  const basePct = Math.round(Math.min(1, Math.max(0, config.baseOpacity)) * 100);
+  const basePct = Math.round(
+    Math.min(1, Math.max(0, config.baseOpacity)) * 100,
+  );
   const backdropFilter =
     config.backdropBlurPx > 0
       ? `blur(${(config.backdropBlurPx * ctx.pxScale).toFixed(2)}px) saturate(0.9)`
@@ -180,6 +197,23 @@ export const HookBg: React.FC<HookBgProps> = ({
         }}
       />
       {/* Edge vignette — separation without a panel. */}
+      {pearl ? (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `
+              radial-gradient(ellipse 48% 115% at 12% 42%, color-mix(in oklch, ${palette.primary} 38%, transparent) 0%, transparent 70%),
+              radial-gradient(ellipse 52% 125% at 88% 64%, color-mix(in oklch, ${palette.secondary} 30%, transparent) 0%, transparent 72%),
+              linear-gradient(180deg, rgba(255,255,255,0.48) 0%, transparent 18%, transparent 76%, color-mix(in oklch, ${palette.vignette} 16%, transparent) 100%)
+            `,
+            boxShadow:
+              "inset 0 1px 0 rgba(255,255,255,0.72), inset 0 -18px 42px rgba(42,63,88,0.1)",
+            mixBlendMode: "soft-light",
+            opacity: 0.7,
+          }}
+        />
+      ) : null}
       <div
         style={{
           position: "absolute",
@@ -201,7 +235,7 @@ export const HookBg: React.FC<HookBgProps> = ({
               transparent 0%,
               color-mix(in oklch, ${palette.highlight} 65%, transparent) 50%,
               transparent 100%)`,
-            mixBlendMode: "screen",
+            mixBlendMode: palette.surface === "light" ? "soft-light" : "screen",
             ...hookBgSweepStyle(ctx),
           }}
         />

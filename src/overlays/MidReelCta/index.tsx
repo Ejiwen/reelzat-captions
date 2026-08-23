@@ -8,7 +8,6 @@ import {
   useVideoConfig,
 } from "remotion";
 import { fontFamily, fontWeights } from "../../design/fonts";
-import { palette } from "../../design/tokens";
 import { hookBgPalettes, type HookBgTheme } from "../HookBg/themes";
 import { progressBarConfig } from "../ProgressBar/config";
 import { getProgressBarGeometry } from "../ProgressBar/math";
@@ -51,6 +50,7 @@ export const MidReelCta: React.FC<MidReelCtaProps> = ({
     config: progressBarConfig,
   });
   const colors = hookBgPalettes[theme];
+  const isLightTheme = colors.surface === "light";
 
   // A long, staged return: typography sinks first, the branches follow, and
   // the ambient ring is the last energy to settle. Every phase reaches zero
@@ -204,13 +204,15 @@ export const MidReelCta: React.FC<MidReelCtaProps> = ({
       paddingBottom: Math.round(7 * scale),
       direction: "rtl",
       whiteSpace: "nowrap",
-      color: palette.ink,
+      color: colors.foreground,
       fontFamily,
       fontWeight: fontWeights.black,
       fontSize,
       lineHeight: 1.35,
       letterSpacing: 0,
-      textShadow: `0 2px ${8 * scale}px rgba(0,0,0,.84), 0 0 ${14 * glowPulse * scale}px ${colors.highlight}88, 0 0 ${22 * scale}px ${colors.base}`,
+      textShadow: isLightTheme
+        ? `0 1px 0 rgba(255,255,255,.9), 0 3px ${10 * scale}px color-mix(in oklch, ${colors.vignette} 30%, transparent)`
+        : `0 2px ${8 * scale}px rgba(0,0,0,.84), 0 0 ${14 * glowPulse * scale}px ${colors.highlight}88, 0 0 ${22 * scale}px ${colors.base}`,
       opacity: readableOpacity,
       transform: `translateY(${riseY}px)`,
       transformOrigin: "bottom center",
@@ -243,8 +245,7 @@ export const MidReelCta: React.FC<MidReelCtaProps> = ({
               inset: 0,
               width: "22%",
               left: `${shimmerX}%`,
-              background:
-                "linear-gradient(90deg, transparent, rgba(255,255,255,.9), transparent)",
+              background: `linear-gradient(90deg, transparent, ${isLightTheme ? colors.highlight : "rgba(255,255,255,.9)"}, transparent)`,
               filter: `blur(${1.4 * scale}px)`,
             }}
           />

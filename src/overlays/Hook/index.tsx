@@ -4,16 +4,23 @@ import { useCurrentFrame, useVideoConfig } from "remotion";
 import { fontFamily, reelTypography } from "../../design/fonts";
 import {
   overlayType,
-  palette,
   spacing,
   textShadow,
   typeScale,
 } from "../../design/tokens";
 import { tokenizeLine } from "../../schema/captions";
 import { HookBg } from "../HookBg";
-import { resolveHookBgTheme, type HookBgTheme } from "../HookBg/themes";
+import {
+  hookBgPalettes,
+  resolveHookBgTheme,
+  type HookBgTheme,
+} from "../HookBg/themes";
 import { OverlayRoot } from "../OverlayRoot";
-import { DEFAULT_SAFE_AREA, type OverlayBaseProps, type OverlayTextZone } from "../types";
+import {
+  DEFAULT_SAFE_AREA,
+  type OverlayBaseProps,
+  type OverlayTextZone,
+} from "../types";
 import { hookExitProgress, hookWordStyle, shimmerStyle } from "./animations";
 import { hookConfig } from "./config";
 
@@ -59,7 +66,10 @@ export const Hook: React.FC<HookProps> = ({
   };
 
   const baseSize =
-    width * overlayType.hookSizeFactor * fontScale * Math.max(0.1, hookConfig.fontSizeScale);
+    width *
+    overlayType.hookSizeFactor *
+    fontScale *
+    Math.max(0.1, hookConfig.fontSizeScale);
   const maxLineWidth = width * spacing.maxLineWidthFraction;
 
   // Fit on one line when possible; long hooks shrink to 0.7× base, then wrap
@@ -83,13 +93,24 @@ export const Hook: React.FC<HookProps> = ({
   }, [data.text, baseSize, maxLineWidth]);
 
   const words = useMemo(() => tokenizeLine(data.text), [data.text]);
-  const shimmer = shimmerStyle({ frame, fps, window, wordCount: words.length, reduced });
+  const shimmer = shimmerStyle({
+    frame,
+    fps,
+    window,
+    wordCount: words.length,
+    reduced,
+  });
   const exitProgress = hookExitProgress(frame, fps, window, words.length);
   const backgroundTheme = resolveHookBgTheme({
     explicit: data.backgroundTheme,
     text: data.text,
     fallback: hookConfig.background.defaultTheme,
   });
+  const themePalette = hookBgPalettes[backgroundTheme];
+  const hookShadow =
+    themePalette.surface === "light"
+      ? `0 1px 0 rgba(255,255,255,0.86), 0 3px 14px color-mix(in oklch, ${themePalette.vignette} 34%, transparent)`
+      : textShadow;
 
   return (
     <OverlayRoot
@@ -120,8 +141,8 @@ export const Hook: React.FC<HookProps> = ({
           fontWeight: reelTypography.hook,
           fontSize,
           lineHeight: typeScale.lineHeight,
-          color: palette.ink,
-          textShadow,
+          color: themePalette.foreground,
+          textShadow: hookShadow,
           paddingBlock: `${spacing.linePaddingBlockEm}em`,
         }}
       >
@@ -138,6 +159,8 @@ export const Hook: React.FC<HookProps> = ({
                   wordCount: words.length,
                   window,
                   reduced,
+                  accentColor: themePalette.accent,
+                  settledColor: themePalette.foreground,
                 }),
               }}
             >
@@ -152,16 +175,26 @@ export const Hook: React.FC<HookProps> = ({
           style={{
             position: "absolute",
             inset: 0,
+            boxSizing: "border-box",
             pointerEvents: "none",
-            background: `linear-gradient(90deg, transparent 30%, ${palette.gold} 50%, transparent 70%)`,
+            paddingBlock: `${spacing.linePaddingBlockEm}em`,
+            background: `linear-gradient(90deg, transparent 28%, ${themePalette.highlight} 48%, color-mix(in oklch, ${themePalette.secondary} 55%, white) 54%, transparent 72%)`,
             backgroundSize: "200% 100%",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
-            mixBlendMode: "screen",
+            mixBlendMode:
+              themePalette.surface === "light" ? "normal" : "screen",
             ...shimmer,
           }}
         >
-          {data.text}
+          {words.map((word, index) => (
+            <React.Fragment key={`shimmer-${word}-${index}`}>
+              <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
+                {word}
+              </span>
+              {index < words.length - 1 ? " " : null}
+            </React.Fragment>
+          ))}
         </span>
       </div>
     </OverlayRoot>

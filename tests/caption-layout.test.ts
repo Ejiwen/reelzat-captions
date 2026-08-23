@@ -14,6 +14,67 @@ import {
   activeAuthoredWordIndex,
   isAuthoredWordEmphasised,
 } from "../src/overlays/CaptionLines";
+import { captionSplitPlacementAtFrame } from "../src/overlays/captionSplitPlacement";
+
+// ---------------------------------------------------------------------------
+// Split-screen placement
+
+const splitWindow = { startFrame: 100, endFrame: 200, centerYPct: 50 };
+
+test("caption reaches the centre when a top/bottom split begins", () => {
+  assert.deepEqual(
+    captionSplitPlacementAtFrame({
+      frame: 100,
+      fps: 30,
+      windows: [splitWindow],
+    }),
+    { mix: 1, centerYPct: 50 },
+  );
+});
+
+test("caption anticipates the split and settles back after it", () => {
+  const before = captionSplitPlacementAtFrame({
+    frame: 96,
+    fps: 30,
+    windows: [splitWindow],
+  });
+  const after = captionSplitPlacementAtFrame({
+    frame: 204,
+    fps: 30,
+    windows: [splitWindow],
+  });
+  assert.equal(before.mix, 0.5);
+  assert.equal(after.mix, 0.5);
+  assert.equal(
+    captionSplitPlacementAtFrame({
+      frame: 209,
+      fps: 30,
+      windows: [splitWindow],
+    }).mix,
+    0,
+  );
+});
+
+test("reduced motion changes placement only inside the split window", () => {
+  assert.equal(
+    captionSplitPlacementAtFrame({
+      frame: 99,
+      fps: 30,
+      windows: [splitWindow],
+      reduced: true,
+    }).mix,
+    0,
+  );
+  assert.equal(
+    captionSplitPlacementAtFrame({
+      frame: 100,
+      fps: 30,
+      windows: [splitWindow],
+      reduced: true,
+    }).mix,
+    1,
+  );
+});
 
 // ---------------------------------------------------------------------------
 // Horizontal fitting

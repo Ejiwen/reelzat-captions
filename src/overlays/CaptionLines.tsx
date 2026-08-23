@@ -66,7 +66,6 @@ export const activeAuthoredWordIndex = (
   return active;
 };
 
-const accentRamp = oklchRamp([palette.sky, palette.cyan]);
 const verseInk = mixOklch(palette.ink, palette.gold, 0.35);
 const verseAccentRamp = oklchRamp([verseInk, palette.gold]);
 
@@ -78,6 +77,9 @@ export const authoredKaraokeWordStyle = ({
   isPast,
   isEmphasised,
   verse = false,
+  foreground = palette.ink,
+  mutedForeground = palette.muted,
+  accent = palette.cyan,
 }: {
   frame: number;
   fps: number;
@@ -86,7 +88,11 @@ export const authoredKaraokeWordStyle = ({
   isPast: boolean;
   isEmphasised: boolean;
   verse?: boolean;
+  foreground?: string;
+  mutedForeground?: string;
+  accent?: string;
 }): React.CSSProperties => {
+  const themedAccentRamp = oklchRamp([foreground, accent]);
   const transition = motion.wordTransitionFrames;
   const tIn = interpolate(
     frame,
@@ -101,15 +107,15 @@ export const authoredKaraokeWordStyle = ({
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
   const activeColour = isEmphasised
-    ? (verse ? verseAccentRamp : accentRamp)(tIn)
-    : mixOklch(palette.muted, palette.ink, tIn);
+    ? (verse ? verseAccentRamp : themedAccentRamp)(tIn)
+    : mixOklch(mutedForeground, foreground, tIn);
   const settledColour = isEmphasised
     ? verse
       ? palette.gold
-      : palette.cyan
+      : accent
     : verse
       ? verseInk
-      : palette.ink;
+      : foreground;
   const springIn =
     frame < timing.startFrame
       ? 0
@@ -162,12 +168,18 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
         hookConfig.background.themeOverride ??
         hookConfig.background.defaultTheme
     ];
+  const themedVerseInk =
+    themePalette.surface === "light"
+      ? mixOklch(themePalette.foreground, themePalette.accent, 0.28)
+      : verseInk;
 
   // Scaled with the type, so the halo looks identical at every fitted size.
   const inkShadow = theme
     ? [
-        `0 ${(fontSize * 0.03).toFixed(1)}px ${(fontSize * 0.17).toFixed(1)}px rgba(0,0,0,0.55)`,
-        `0 0 ${(fontSize * 0.45).toFixed(1)}px color-mix(in oklch, ${themePalette.highlight} 30%, transparent)`,
+        themePalette.surface === "light"
+          ? `0 1px 0 rgba(255,255,255,0.9)`
+          : `0 ${(fontSize * 0.03).toFixed(1)}px ${(fontSize * 0.17).toFixed(1)}px rgba(0,0,0,0.55)`,
+        `0 0 ${(fontSize * 0.45).toFixed(1)}px color-mix(in oklch, ${themePalette.vignette} ${themePalette.surface === "light" ? 18 : 30}%, transparent)`,
       ].join(", ")
     : textShadow;
 
@@ -192,7 +204,7 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
         fontWeight: reelTypography.caption,
         fontSize,
         lineHeight: typeScale.lineHeight,
-        color: verse ? verseInk : palette.ink,
+        color: verse ? themedVerseInk : themePalette.foreground,
         textShadow: inkShadow,
       }}
     >
@@ -221,6 +233,9 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
                   isPast: flatIndex < activeWordIndex,
                   isEmphasised,
                   verse,
+                  foreground: themePalette.foreground,
+                  mutedForeground: themePalette.mutedForeground,
+                  accent: themePalette.accent,
                 })
               : stagger
                 ? staggeredWordStyle({
@@ -233,8 +248,17 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
                   })
                 : {};
             if (isEmphasised && !timing) {
-              style.color = (verse ? verseAccentRamp : accentRamp)(0.8);
-              style.transform = `${style.transform ?? ""} scale(1.03)`.trim();
+              style.color = (
+                verse
+                  ? oklchRamp([themedVerseInk, themePalette.accent])
+                  : oklchRamp([themePalette.foreground, themePalette.accent])
+              )(themePalette.surface === "light" ? 1 : 0.8);
+              style.fontWeight = 800;
+              style.textShadow =
+                themePalette.surface === "light"
+                  ? `0 1px 0 rgba(255,255,255,0.78), 0 0 ${(fontSize * 0.16).toFixed(1)}px color-mix(in oklch, ${themePalette.accent} 14%, transparent)`
+                  : undefined;
+              style.transform = `${style.transform ?? ""} scale(${themePalette.surface === "light" ? 1.04 : 1.03})`.trim();
             }
             return <Word key={wordIndex} text={word} style={style} />;
           })}

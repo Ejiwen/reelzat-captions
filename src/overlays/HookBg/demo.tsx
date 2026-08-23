@@ -22,11 +22,14 @@ const demoHooks: Record<HookBgTheme, string> = {
   culture: "بيتُ شعرٍ واحد خلّده التاريخ",
   general: "أربع دول خرجت من دولة واحدة",
   social: "قصة عائلة بدأت من رسالة واحدة",
+  featured: "لحظة استثنائية تستحق أن تُروى",
 };
 
 // Video-like backdrop: a bright warm highlight sweeping into deep shadow,
 // diagonally crossing the hook band so every theme is checked over both.
-const MockVideoStage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const MockVideoStage: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   useFontGate();
   return (
     <AbsoluteFill
@@ -63,3 +66,4 @@ export const HookBgReligionDemo = themeDemo("religion");
 export const HookBgCultureDemo = themeDemo("culture");
 export const HookBgGeneralDemo = themeDemo("general");
 export const HookBgSocialDemo = themeDemo("social");
+export const HookBgFeaturedDemo = themeDemo("featured");

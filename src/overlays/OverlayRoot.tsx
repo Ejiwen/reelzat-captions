@@ -2,8 +2,19 @@ import { Trail } from "@remotion/motion-blur";
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { entryTrail } from "../design/tokens";
-import { isInEntryWindow, overlayMotionStyle, type MotionCtx, type MotionSpec } from "../motion";
-import type { OverlayBaseProps, OverlayPosition, OverlaySafeArea, OverlayTextZone } from "./types";
+import {
+  isInEntryWindow,
+  overlayMotionStyle,
+  type MotionCtx,
+  type MotionSpec,
+} from "../motion";
+import { mergeMotionStyles } from "../motion/merge";
+import type {
+  OverlayBaseProps,
+  OverlayPosition,
+  OverlaySafeArea,
+  OverlayTextZone,
+} from "./types";
 import { DEFAULT_SAFE_AREA } from "./types";
 
 // Shared chassis for every overlay: window gating, safe-area / director-zone
@@ -48,7 +59,10 @@ const zoneStyle = (zone: OverlayTextZone): React.CSSProperties => ({
 // content and the faces in it. Content anchors to the band edge that borders
 // the content area, so taller elements overflow toward the frame edge, never
 // toward a face.
-const bandStyle = (position: OverlayPosition, safeArea: OverlaySafeArea): React.CSSProperties =>
+const bandStyle = (
+  position: OverlayPosition,
+  safeArea: OverlaySafeArea,
+): React.CSSProperties =>
   position === "top"
     ? {
         insetInline: `${safeArea.sidePct}%`,
@@ -85,6 +99,20 @@ export const OverlayRoot: React.FC<OverlayRootProps> = ({
   }
 
   const ctx: MotionCtx = { frame, fps, window, direction, reduced };
+  const resolvedPlacement =
+    placementStyle ??
+    (bottomOffsetPx !== undefined
+      ? {
+          insetInline: `${safeArea.sidePct}%`,
+          bottom: bottomOffsetPx,
+        }
+      : textZone
+        ? zoneStyle(textZone)
+        : bandStyle(position, safeArea));
+  const composedStyle = mergeMotionStyles(
+    resolvedPlacement,
+    animation ? overlayMotionStyle(animation, ctx) : undefined,
+  );
 
   const content = (
     <div
@@ -95,16 +123,7 @@ export const OverlayRoot: React.FC<OverlayRootProps> = ({
         alignItems: align === "start" ? "flex-start" : "center",
         direction,
         pointerEvents: "none",
-        ...(placementStyle ??
-        (bottomOffsetPx !== undefined
-          ? {
-              insetInline: `${safeArea.sidePct}%`,
-              bottom: bottomOffsetPx,
-            }
-          : textZone
-            ? zoneStyle(textZone)
-            : bandStyle(position, safeArea))),
-        ...(animation ? overlayMotionStyle(animation, ctx) : {}),
+        ...composedStyle,
       }}
     >
       {children}
