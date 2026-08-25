@@ -117,7 +117,7 @@ export const hookBgPalettes: Record<HookBgTheme, HookBgPalette> = {
     vignette: "#334B63",
     foreground: "#10263E",
     mutedForeground: "#39566E",
-    accent: "#7A315D",
+    accent: "#8A315E",
     surface: "light",
   },
 };

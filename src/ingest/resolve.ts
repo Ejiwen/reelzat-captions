@@ -28,7 +28,10 @@ import {
   type Sidecar,
   type TextDirection,
 } from "./schemas";
-import type { OverlaySplitWindow } from "../overlays/types";
+import type {
+  OverlayFaceWindow,
+  OverlaySplitWindow,
+} from "../overlays/types";
 
 // ---------------------------------------------------------------------------
 // Frames. Windows arrive as clip-relative seconds; every frame number in the
@@ -83,6 +86,7 @@ export type ResolvedAuthoring = {
   kind: Authoring["kind"];
   channel: string;
   episodeTitle: string;
+  nameplateAvoidance: boolean;
   hook: ResolvedHook;
   captions: ResolvedAuthoredCaption[];
   publish: Authoring["publish"] | null;
@@ -114,6 +118,8 @@ export type ReelPackage = {
     captions: ResolvedCaptions | null;
   };
   director: Director | null;
+  // Canonical, frame-timed face boxes used by collision-aware overlays.
+  faceWindows: OverlayFaceWindow[];
   splitScreenWindows: OverlaySplitWindow[];
 };
 
@@ -450,6 +456,28 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
 
   const fps = sidecar.fps;
   const durationInFrames = secondsToFrames(sidecar.durationInSeconds, fps);
+  const faceWindows: OverlayFaceWindow[] = (director?.faces ?? [])
+    .map((face) => ({
+      xPct: face.xPct,
+      yPct: face.yPct,
+      wPct: face.wPct,
+      hPct: face.hPct,
+      ...(face.estimated === undefined
+        ? {}
+        : { estimated: face.estimated }),
+      startFrame:
+        face.startMs === undefined
+          ? 0
+          : Math.max(0, secondsToFrames(face.startMs / 1000, fps)),
+      endFrame:
+        face.endMs === undefined
+          ? durationInFrames
+          : Math.min(
+              durationInFrames,
+              secondsToFrames(face.endMs / 1000, fps),
+            ),
+    }))
+    .filter((face) => face.endFrame > face.startFrame);
   const splitScreenWindows: OverlaySplitWindow[] = (
     director?.splitWindows ?? []
   )
@@ -467,6 +495,7 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
         kind: authoring.kind,
         channel: authoring.source.channel,
         episodeTitle: authoring.source.episodeTitle,
+        nameplateAvoidance: authoring.nameplateAvoidance,
         hook: {
           text: authoring.hook.text,
           position: authoring.hook.position,
@@ -515,6 +544,7 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
     authored,
     asr: { words, captions: asrCaptions },
     director,
+    faceWindows,
     splitScreenWindows,
   };
 };

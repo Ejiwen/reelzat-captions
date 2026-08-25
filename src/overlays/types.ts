@@ -14,6 +14,19 @@ export type OverlaySplitWindow = OverlayWindow & {
   centerYPct: number;
 };
 
+// A face rectangle resolved to the composition timeline. Unlike the raw
+// director input (milliseconds or segment seconds), overlays consume frames
+// only, which keeps all avoidance decisions deterministic in Remotion.
+export type OverlayFaceWindow = OverlayWindow & {
+  xPct: number;
+  yPct: number;
+  wPct: number;
+  hPct: number;
+  // Reelzy marks fallback geometry when no reliable detector box exists.
+  // Avoidance treats these boxes conservatively toward their nearest edge.
+  estimated?: boolean;
+};
+
 export type OverlayPosition = "top" | "bottom";
 
 export type TextDirection = "rtl" | "ltr";

@@ -1,12 +1,23 @@
-import React from "react";
-import { useVideoConfig } from "remotion";
+import { measureText } from "@remotion/layout-utils";
+import React, { useMemo } from "react";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 import { fontFamily, reelTypography } from "../../design/fonts";
 import { overlaySurfaces, overlayType, palette } from "../../design/tokens";
 import { OverlayRoot } from "../OverlayRoot";
 import { hookBgPalettes, type HookBgTheme } from "../HookBg/themes";
 import { facebookSafeRegionTopPx } from "../ProgressBar/math";
-import type { OverlayBaseProps } from "../types";
+import type {
+  OverlayBaseProps,
+  OverlayFaceWindow,
+  OverlayWindow,
+} from "../types";
 import { nameplateDefaultAnimation } from "./animations";
+import {
+  nameplateAvoidanceConfig,
+  nameplatePlacementAtFrame,
+  nameplateTitleOffsetPx,
+} from "./placement";
+import { nameplateThemeFor } from "./theme";
 
 export type NameplateProps = OverlayBaseProps & {
   data: {
@@ -14,6 +25,13 @@ export type NameplateProps = OverlayBaseProps & {
     episodeTitle?: string;
   };
   theme?: HookBgTheme;
+  faceWindows?: OverlayFaceWindow[];
+  busyWindows?: OverlayWindow[];
+  maxReturns?: number;
+  animated?: boolean;
+  // Deprecated compatibility alias for packages exported before timed
+  // copyright choreography replaced face-reactive placement.
+  avoidFaces?: boolean;
 };
 
 const nameplateSeparatorColor = "#E8D61A";
@@ -31,8 +49,11 @@ export const Nameplate: React.FC<NameplateProps> = ({
   fontScale = 1,
   reduced,
   theme,
+  animated,
+  avoidFaces = false,
 }) => {
-  const { width, height } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const { width, height, fps } = useVideoConfig();
 
   const channelSize =
     width * overlayType.nameplateChannelSizeFactor * fontScale;
@@ -41,26 +62,119 @@ export const Nameplate: React.FC<NameplateProps> = ({
   const resolvedSidePct = safeArea?.sidePct ?? 7;
   const safeTop = facebookSafeRegionTopPx(width, height, 4 / 5);
   const safeRegionHeight = height - safeTop * 2;
-  // Physical left side avoids the TikTok/Reels action rail on the right.
-  // The anchor sits in the upper third of the shared centered 4:5 safe region.
-  const anchorX = width * (resolvedSidePct / 100);
+  // The identity rail has one calm editorial home. Adaptive mode changes only
+  // its visibility; it never makes the viewer chase the label around frame.
+  const leftAnchorX = width * (resolvedSidePct / 100);
+  const rightInsetPct = Math.max(13, resolvedSidePct + 6);
+  const rightAnchorX = width * (1 - rightInsetPct / 100);
   const anchorY = safeTop + safeRegionHeight * 0.28;
-  const themePalette = theme ? hookBgPalettes[theme] : null;
+  // The pearl hook needs a quiet dark identity rail over live footage.
+  // Deliberately reuse the social treatment so featured does not introduce
+  // a second, competing light surface beside the guest's head.
+  const nameplateTheme = nameplateThemeFor(theme);
+  const themePalette = nameplateTheme
+    ? hookBgPalettes[nameplateTheme]
+    : null;
   const isLightTheme = themePalette?.surface === "light";
+  const usesSocialSurface = nameplateTheme === "social";
+  const metrics = useMemo(() => {
+    const channelWidth = measureText({
+      text: data.channel,
+      fontFamily,
+      fontWeight: reelTypography.nameplateChannel,
+      fontSize: channelSize,
+      validateFontIsLoaded: true,
+    }).width;
+    const episodeWidth = data.episodeTitle
+      ? measureText({
+          text: data.episodeTitle,
+          fontFamily,
+          fontWeight: reelTypography.nameplateEpisode,
+          fontSize: episodeSize,
+          validateFontIsLoaded: true,
+        }).width
+      : 0;
+    const paddingInline = channelSize * 0.58;
+    const gap = channelSize * 0.42;
+    const separatorWidth = data.episodeTitle ? channelSize * 0.54 : 0;
+    const compactWidth = channelWidth + paddingInline * 2;
+    const naturalFullWidth = data.episodeTitle
+      ? compactWidth + gap * 2 + separatorWidth + episodeWidth
+      : compactWidth;
+    return {
+      compactWidth,
+      fullWidth: Math.min(width * 0.72, naturalFullWidth),
+      episodeWidth,
+      episodeViewportWidth: Math.max(
+        0,
+        Math.min(width * 0.72, naturalFullWidth) -
+          paddingInline * 2 -
+          channelWidth -
+          gap * 2 -
+          separatorWidth,
+      ),
+      railThickness: channelSize * (1.35 + 0.44),
+    };
+  }, [
+    channelSize,
+    data.channel,
+    data.episodeTitle,
+    episodeSize,
+    width,
+  ]);
+  const placement = nameplatePlacementAtFrame({
+    frame,
+    windowStartFrame: window.startFrame,
+    windowEndFrame: window.endFrame,
+    fps,
+    enabled: animated ?? avoidFaces,
+    layout: {
+      width,
+      height,
+      leftAnchorXPx: leftAnchorX,
+      rightAnchorXPx: rightAnchorX,
+      defaultCenterYPx: anchorY,
+      safeTopPx: safeTop,
+      safeBottomPx: height - safeTop,
+      fullLengthPx: metrics.fullWidth,
+      compactLengthPx: metrics.compactWidth,
+      railThicknessPx: metrics.railThickness,
+    },
+    config: reduced
+      ? { ...nameplateAvoidanceConfig, transitionFrames: 0 }
+      : nameplateAvoidanceConfig,
+  });
+  const renderedWidth =
+    metrics.compactWidth +
+    (metrics.fullWidth - metrics.compactWidth) * placement.fullMix;
+  const titleOverflowPx = Math.max(
+    0,
+    metrics.episodeWidth - metrics.episodeViewportWidth,
+  );
+  const titleOffsetPx = reduced
+    ? 0
+    : nameplateTitleOffsetPx({
+        frame,
+        momentStartFrame: placement.momentStartFrame,
+        momentEndFrame: placement.momentEndFrame,
+        moment: placement.moment,
+        fps,
+        overflowPx: titleOverflowPx,
+        direction,
+      });
 
   return (
     <OverlayRoot
       window={window}
       position={position}
-      // The identity card has a fixed editorial home in the physical
-      // top-left corner. Its text remains RTL inside the card.
+      // Fixed physical top-left home; text remains RTL inside the card.
       direction="ltr"
       animation={animation}
       safeArea={safeArea}
       textZone={null}
       placementStyle={{
-        left: anchorX,
-        top: anchorY,
+        left: placement.anchorXPx + placement.edgeOffsetPx,
+        top: placement.centerYPx,
         width: 0,
         height: 0,
         alignItems: "center",
@@ -72,7 +186,8 @@ export const Nameplate: React.FC<NameplateProps> = ({
       <div
         style={{
           display: "flex",
-          width: "max-content",
+          boxSizing: "border-box",
+          width: renderedWidth,
           flexShrink: 0,
           // With the -90deg rotation, RTL row order reads top-to-bottom as:
           // channel, separator, episode title.
@@ -86,18 +201,29 @@ export const Nameplate: React.FC<NameplateProps> = ({
           borderRadius: channelSize * 0.42,
           background: isLightTheme
             ? `linear-gradient(118deg, color-mix(in oklch, ${themePalette.highlight} 94%, transparent), color-mix(in oklch, ${themePalette.base} 92%, ${themePalette.secondary}))`
+            : usesSocialSurface
+              ? "linear-gradient(118deg, rgba(5,4,3,0.78), rgba(28,17,8,0.62))"
             : overlaySurfaces.chipBackground,
           border: isLightTheme
             ? `1px solid color-mix(in oklch, ${themePalette.vignette} 26%, white)`
-            : undefined,
+            : usesSocialSurface
+              ? "1px solid rgba(232,177,92,0.16)"
+              : undefined,
           boxShadow: isLightTheme
             ? `0 ${channelSize * 0.16}px ${channelSize * 0.55}px rgba(16,32,51,0.2), inset 0 1px 0 rgba(255,255,255,0.88)`
-            : undefined,
+            : usesSocialSurface
+              ? `0 ${channelSize * 0.16}px ${channelSize * 0.62}px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.05)`
+              : undefined,
           fontFamily,
           lineHeight: 1.35,
           whiteSpace: "nowrap",
           overflow: "hidden",
-          transform: "rotate(-90deg)",
+          opacity: placement.opacity,
+          filter:
+            placement.blurPx > 0.05
+              ? `blur(${placement.blurPx.toFixed(2)}px)`
+              : undefined,
+          transform: `scale(${placement.scale.toFixed(4)}) rotate(-90deg)`,
           transformOrigin: "center",
         }}
       >
@@ -121,21 +247,31 @@ export const Nameplate: React.FC<NameplateProps> = ({
                 borderRadius: "50%",
                 background: themePalette?.accent ?? nameplateSeparatorColor,
                 boxShadow: `0 0 ${channelSize * 0.2}px color-mix(in oklch, ${nameplateSeparatorColor} 55%, transparent)`,
+                opacity: placement.fullMix,
               }}
             />
             <div
               style={{
                 minWidth: 0,
+                width: metrics.episodeViewportWidth,
                 overflow: "hidden",
-                textOverflow: "ellipsis",
-                fontSize: episodeSize,
-                fontWeight: reelTypography.nameplateEpisode,
-                color:
-                  themePalette?.mutedForeground ??
-                  `color-mix(in oklch, ${palette.ink} 88%, ${palette.muted})`,
+                opacity: placement.fullMix,
               }}
             >
-              {data.episodeTitle}
+              <div
+                style={{
+                  width: "max-content",
+                  fontSize: episodeSize,
+                  fontWeight: reelTypography.nameplateEpisode,
+                  color:
+                    themePalette?.mutedForeground ??
+                    `color-mix(in oklch, ${palette.ink} 88%, ${palette.muted})`,
+                  transform: `translateX(${titleOffsetPx.toFixed(2)}px)`,
+                  willChange: titleOverflowPx > 1 ? "transform" : undefined,
+                }}
+              >
+                {data.episodeTitle}
+              </div>
             </div>
           </>
         ) : null}

@@ -238,7 +238,12 @@ export const RemotionRoot: React.FC = () => {
           component={CaptionRegularVerseDemo}
           {...DEMO}
         />
-        <Composition id="Nameplate-Demo" component={NameplateDemo} {...DEMO} />
+        <Composition
+          id="Nameplate-Demo"
+          component={NameplateDemo}
+          {...DEMO}
+          durationInFrames={900}
+        />
         <Composition
           id="ProgressBar-Demo"
           component={ProgressBarDemo}

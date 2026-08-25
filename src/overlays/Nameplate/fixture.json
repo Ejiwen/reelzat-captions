@@ -1,9 +1,9 @@
 {
   "data": {
     "channel": "أسمار وأفكار",
-    "episodeTitle": "مأساة حاضرة دارفور"
+    "episodeTitle": "مأساة حاضرة دارفور والتحولات التي صنعت المشهد الكامل"
   },
-  "window": { "startFrame": 20, "endFrame": 170 },
+  "window": { "startFrame": 0, "endFrame": 900 },
   "position": "top",
   "direction": "rtl"
 }

@@ -98,6 +98,9 @@ export const authoringSchema = z.object({
   reelId: z.number().optional(),
   rank: z.number().optional(),
   title: z.string().optional(),
+  // Opt-in because older packages keep the copyright rail fixed throughout;
+  // enabled packages use the 13-second opening + 7-second closing timeline.
+  nameplateAvoidance: z.boolean().default(false),
   source: authoringSourceSchema,
   hook: authoredHookSchema,
   captions: z.array(authoredCaptionSchema).default([]),
@@ -259,10 +262,16 @@ export const normalizeSidecar = (data: unknown): unknown => {
 // h: 0.5 } — x−w/2 stays in bounds where a top-left reading would not).
 // Converted to the canonical top-left percent rectangles used by the debug
 // guides and never-cover-a-face checks.
-export const facesFromSegments = (segments: unknown[]): DirectorZone[] => {
+export const facesFromSegments = (
+  segments: unknown[],
+): Array<
+  DirectorZone & { startMs?: number; endMs?: number }
+> => {
   const clamp = (v: number) =>
     Math.min(100, Math.max(0, Math.round(v * 100) / 100));
-  const out: DirectorZone[] = [];
+  const out: Array<
+    DirectorZone & { startMs?: number; endMs?: number }
+  > = [];
   for (const seg of segments) {
     if (!isRecord(seg) || !Array.isArray(seg["faces"])) {
       continue;
@@ -285,6 +294,12 @@ export const facesFromSegments = (segments: unknown[]): DirectorZone[] => {
         yPct: clamp((y - h / 2) * 100),
         wPct: clamp(w * 100),
         hPct: clamp(h * 100),
+        ...(typeof seg["t0"] === "number"
+          ? { startMs: Math.round(seg["t0"] * 1000) }
+          : {}),
+        ...(typeof seg["t1"] === "number"
+          ? { endMs: Math.round(seg["t1"] * 1000) }
+          : {}),
       });
     }
   }
@@ -343,6 +358,7 @@ export const directorSchema = z.object({
       directorZoneSchema.extend({
         startMs: z.number().nonnegative().optional(),
         endMs: z.number().nonnegative().optional(),
+        estimated: z.boolean().optional(),
       }),
     )
     .default([]),
@@ -395,6 +411,9 @@ export const normalizeDirector = (data: unknown): unknown => {
               : {}),
             ...(typeof f["t1"] === "number"
               ? { endMs: Math.round(f["t1"] * 1000) }
+              : {}),
+            ...(typeof f["estimated"] === "boolean"
+              ? { estimated: f["estimated"] }
               : {}),
           };
         }

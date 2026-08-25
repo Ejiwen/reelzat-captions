@@ -353,6 +353,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
         position={nameplatePosition}
         direction={pkg.direction}
         safeArea={pkg.safeArea}
+        animated={authored.nameplateAvoidance}
         theme={resolvedHookBgTheme}
         fontScale={fontScale}
         reduced={reduced}

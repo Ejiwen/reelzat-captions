@@ -119,6 +119,17 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
         hookConfig.background.themeOverride ??
         hookConfig.background.defaultTheme
     ];
+  // Featured never emits white moving light across the video or caption.
+  // Its bridge uses the darker editorial accent, keeping the pearl surface
+  // luminous without compromising the dark ink that lands on it.
+  const energyPrimary =
+    themePalette.surface === "light"
+      ? themePalette.vignette
+      : themePalette.primary;
+  const energyHighlight =
+    themePalette.surface === "light"
+      ? themePalette.accent
+      : themePalette.highlight;
   const local = frame - window.startFrame;
   const end = atFps(
     config.ignitionFrames + config.travelFrames + config.revealFrames,
@@ -228,7 +239,7 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
           d={d}
           pathLength={1}
           fill="none"
-          stroke={themePalette.primary}
+          stroke={energyPrimary}
           strokeWidth={config.beamGlowWidthPx * px}
           strokeLinecap="round"
           strokeDasharray={`${travel} ${Math.max(0.001, 1 - travel)}`}
@@ -242,13 +253,13 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
           d={d}
           pathLength={1}
           fill="none"
-          stroke={themePalette.highlight}
+          stroke={energyHighlight}
           strokeWidth={config.beamWidthPx * px}
           strokeLinecap="round"
           strokeDasharray={`${travel} ${Math.max(0.001, 1 - travel)}`}
           opacity={beamOpacity}
           style={{
-            filter: `drop-shadow(0 0 ${7 * px}px ${themePalette.highlight})`,
+            filter: `drop-shadow(0 0 ${7 * px}px ${energyHighlight})`,
             mixBlendMode: "screen",
           }}
         />
@@ -265,7 +276,7 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
             transform: "translate(-50%, -50%)",
             borderRadius: "50%",
             opacity: pulse * config.sourcePulseOpacity,
-            background: `radial-gradient(circle, transparent 42%, ${themePalette.highlight} 50%, transparent 72%)`,
+            background: `radial-gradient(circle, transparent 42%, ${energyHighlight} 50%, transparent 72%)`,
             mixBlendMode: "screen",
           }}
         />
@@ -281,8 +292,8 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
             height: config.headRadiusPx * px * 2,
             transform: "translate(-50%, -50%)",
             borderRadius: "50%",
-            background: themePalette.highlight,
-            boxShadow: `0 0 ${14 * px}px ${6 * px}px ${themePalette.primary}`,
+            background: energyHighlight,
+            boxShadow: `0 0 ${14 * px}px ${6 * px}px ${energyPrimary}`,
             opacity: beamOpacity,
             mixBlendMode: "screen",
           }}
@@ -302,7 +313,7 @@ export const CaptionEnergyBridge: React.FC<CaptionEnergyBridgeProps> = ({
             arrival *
             (1 - Math.max(0, arrival - 0.72) / 0.28) *
             config.impactOpacity,
-          background: `radial-gradient(circle, ${themePalette.highlight} 0%, ${themePalette.primary} 22%, transparent 72%)`,
+          background: `radial-gradient(circle, ${energyHighlight} 0%, ${energyPrimary} 22%, transparent 72%)`,
           filter: `blur(${4 * px}px)`,
           mixBlendMode: "screen",
         }}
@@ -431,11 +442,15 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
         1,
         config.launchOpacityFrom + (1 - config.launchOpacityFrom) * fadeIn,
       );
-  const surfaceBlur = reduced
-    ? 0
-    : config.launchBlurPx * px * (1 - fadeIn + leave * 0.5);
+  const surfaceBlur =
+    reduced || isLightTheme
+      ? 0
+      : config.launchBlurPx * px * (1 - fadeIn + leave * 0.5);
   const radius =
     lineCount <= 1 ? config.oneLineRadiusPx : config.twoLineRadiusPx;
+  // Featured is a sculpted editorial plaque, not a UI pill. The other themes
+  // retain their established roundness.
+  const surfaceRadius = isLightTheme ? (lineCount <= 1 ? 28 : 25) : radius;
   const revealRadius = 18 + reveal * 142;
   const mask = `radial-gradient(circle at 50% 100%, black 0%, black ${Math.max(0, revealRadius - 18)}%, transparent ${revealRadius}%)`;
   const accentReveal = interpolate(
@@ -470,9 +485,9 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
   });
   const surfaceBackground = isLightTheme
     ? `
-      radial-gradient(ellipse 34% 150% at 14% -18%, color-mix(in oklch, ${themePalette.highlight} 48%, transparent) 0%, transparent 72%),
-      radial-gradient(ellipse 46% 160% at 92% 78%, color-mix(in oklch, ${themePalette.secondary} 34%, transparent) 0%, transparent 74%),
-      linear-gradient(112deg, rgba(252,254,255,0.78) 0%, color-mix(in oklch, ${themePalette.primary} 66%, transparent) 52%, color-mix(in oklch, ${themePalette.secondary} 58%, transparent) 100%)`
+      radial-gradient(ellipse 68% 118% at 18% -22%, rgba(221,224,225,0.82) 0%, rgba(221,224,225,0.12) 52%, transparent 70%),
+      radial-gradient(ellipse 50% 138% at 94% 112%, rgba(174,167,184,0.62) 0%, transparent 64%),
+      linear-gradient(118deg, #cdd1d3 0%, #c4c8ca 28%, #bcc3c7 54%, #b8b7c1 78%, #b4afbc 100%)`
     : isVerse
       ? `
         radial-gradient(ellipse 72% 130% at 50% -24%, color-mix(in oklch, #d9b86c 18%, transparent) 0%, transparent 72%),
@@ -506,26 +521,44 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
           // The glow spreads into the safe gap, never across it.
           inset: `${-12 * px}px ${-Math.min(16, config.surfaceSafeGapPx) * px}px`,
           zIndex: -3,
-          borderRadius: (radius + 14) * px,
-          opacity: reveal * (1 - exit) * (isVerse ? 0.27 : 0.34),
+          borderRadius: (surfaceRadius + 14) * px,
+          opacity:
+            reveal * (1 - exit) * (isLightTheme ? 0.1 : isVerse ? 0.27 : 0.34),
           background: isVerse
             ? `radial-gradient(ellipse 58% 92% at 50% 50%, color-mix(in oklch, ${themePalette.highlight} 26%, #d9b86c), transparent 76%)`
             : `radial-gradient(ellipse 42% 78% at 92% 48%, color-mix(in oklch, ${themePalette.highlight} 38%, transparent), transparent 76%), radial-gradient(ellipse 46% 80% at 8% 52%, color-mix(in oklch, ${themePalette.primary} 40%, transparent), transparent 78%)`,
-          filter: `blur(${22 * px}px)`,
+          filter: `blur(${(isLightTheme ? 16 : 22) * px}px)`,
           mixBlendMode: isLightTheme ? "normal" : "screen",
         }}
       />
+      {isLightTheme ? (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: `${2 * px}px ${1 * px}px ${-6 * px}px`,
+            zIndex: -2,
+            borderRadius: surfaceRadius * px,
+            opacity: reveal * (1 - exit),
+            background: "linear-gradient(180deg, #74808e 0%, #536173 100%)",
+            border: `${Math.max(1, px)}px solid rgba(34,50,68,0.32)`,
+            boxShadow: `0 ${18 * px}px ${36 * px}px rgba(7,20,34,0.25), 0 ${5 * px}px ${9 * px}px rgba(7,20,34,0.22)`,
+            WebkitMaskImage: mask,
+            maskImage: mask,
+          }}
+        />
+      ) : null}
       <div
         aria-hidden
         style={{
           position: "absolute",
           inset: 0,
           zIndex: -1,
-          borderRadius: radius * px,
+          borderRadius: surfaceRadius * px,
           overflow: "hidden",
           opacity:
             config.surfaceOpacity *
-            (isLightTheme ? 0.88 : 1) *
+            (isLightTheme ? 0.98 : 1) *
             reveal *
             (1 - exit),
           // The template palette IS the caption's colour: a primary field on
@@ -534,10 +567,10 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
           background: surfaceBackground,
           border: `${Math.max(1, 1.25 * px)}px solid color-mix(in oklch, ${isLightTheme ? themePalette.vignette : isVerse ? "#d9b86c" : themePalette.highlight} ${isLightTheme ? 28 : isVerse ? 46 : 32}%, rgba(255,255,255,0.3))`,
           boxShadow: isLightTheme
-            ? `0 ${14 * px}px ${42 * px}px rgba(15,32,51,0.18), 0 ${3 * px}px ${8 * px}px rgba(15,32,51,0.1), inset 0 ${1 * px}px 0 rgba(255,255,255,0.78), inset 0 ${-1 * px}px 0 color-mix(in oklch, ${themePalette.vignette} 16%, transparent), 0 0 ${26 * px}px rgba(255,255,255,0.2)`
+            ? `inset 0 ${1.5 * px}px 0 rgba(255,255,255,0.58), inset 0 ${-2 * px}px ${3 * px}px rgba(45,58,75,0.2), inset ${2 * px}px 0 ${3 * px}px rgba(255,255,255,0.2)`
             : `0 ${14 * px}px ${42 * px}px rgba(0,0,0,0.56), 0 ${3 * px}px ${8 * px}px rgba(0,0,0,0.3), inset 0 ${1 * px}px 0 rgba(255,255,255,0.13), inset 0 ${-1 * px}px 0 rgba(0,0,0,0.48), 0 0 ${22 * px}px color-mix(in oklch, ${themePalette.primary} 12%, transparent)`,
-          WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(${isLightTheme ? 0.94 : 0.88}) brightness(${isLightTheme ? 1.08 : 0.62})`,
-          backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(${isLightTheme ? 0.94 : 0.88}) brightness(${isLightTheme ? 1.08 : 0.62})`,
+          WebkitBackdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(${isLightTheme ? 0.84 : 0.88}) brightness(${isLightTheme ? 0.96 : 0.62})`,
+          backdropFilter: `blur(${config.surfaceBlurPx * px}px) saturate(${isLightTheme ? 0.84 : 0.88}) brightness(${isLightTheme ? 0.96 : 0.62})`,
           WebkitMaskImage: mask,
           maskImage: mask,
         }}
@@ -548,8 +581,10 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
             insetInline: 20 * px,
             top: 0,
             height: Math.max(1, 1.25 * px),
-            opacity: 0.62,
-            background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.28) 34%, color-mix(in oklch, ${themePalette.highlight} 42%, white) 74%, transparent)`,
+            opacity: isLightTheme ? 0.44 : 0.62,
+            background: isLightTheme
+              ? "linear-gradient(90deg, transparent, rgba(255,255,255,0.5) 34%, rgba(237,232,242,0.36) 74%, transparent)"
+              : `linear-gradient(90deg, transparent, rgba(255,255,255,0.28) 34%, color-mix(in oklch, ${themePalette.highlight} 42%, white) 74%, transparent)`,
             filter: `blur(${0.35 * px}px)`,
           }}
         />
@@ -562,7 +597,9 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
             bottom: 0,
             height: Math.max(1, 1.25 * px),
             opacity: 0.45 * accentReveal,
-            background: `linear-gradient(90deg, transparent, color-mix(in oklch, ${themePalette.primary} 78%, white) 30%, color-mix(in oklch, ${themePalette.highlight} 60%, transparent) 78%, transparent)`,
+            background: isLightTheme
+              ? "linear-gradient(90deg, transparent, rgba(83,97,115,0.72) 30%, rgba(138,49,94,0.28) 78%, transparent)"
+              : `linear-gradient(90deg, transparent, color-mix(in oklch, ${themePalette.primary} 78%, white) 30%, color-mix(in oklch, ${themePalette.highlight} 60%, transparent) 78%, transparent)`,
             filter: `blur(${0.4 * px}px)`,
           }}
         />
@@ -570,9 +607,11 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
           style={{
             position: "absolute",
             inset: 0,
-            opacity: 0.055,
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.22) ${Math.max(0.5, 0.7 * px)}px, transparent ${Math.max(0.5, 0.7 * px)}px)`,
-            backgroundSize: `100% ${6 * px}px`,
+            opacity: isLightTheme ? 0.12 : 0.055,
+            backgroundImage: isLightTheme
+              ? `repeating-linear-gradient(112deg, rgba(16,38,62,0.08) 0, rgba(16,38,62,0.08) ${Math.max(0.35, 0.45 * px)}px, transparent ${Math.max(0.35, 0.45 * px)}px, transparent ${4.5 * px}px)`
+              : `linear-gradient(rgba(255,255,255,0.22) ${Math.max(0.5, 0.7 * px)}px, transparent ${Math.max(0.5, 0.7 * px)}px)`,
+            backgroundSize: isLightTheme ? undefined : `100% ${6 * px}px`,
             mixBlendMode: "soft-light",
           }}
         />
@@ -583,7 +622,10 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
             bottom: "-22%",
             left: `${100 - sheen * (100 + config.sheenWidthPct)}%`,
             width: `${config.sheenWidthPct}%`,
-            opacity: sheenOpacity,
+            // The moving sweep is valuable on dark glass, but on featured it
+            // crosses behind the glyphs and looks like a travelling white
+            // text shadow. The pearl surface uses static edge light instead.
+            opacity: isLightTheme ? 0 : sheenOpacity,
             transform: "skewX(-14deg)",
             background: `linear-gradient(90deg, transparent, color-mix(in oklch, ${themePalette.highlight} 72%, white), transparent)`,
             filter: `blur(${7 * px}px)`,
@@ -642,14 +684,21 @@ export const CaptionEnergySurface: React.FC<CaptionEnergySurfaceProps> = ({
             // Grows with the block so a three-line card keeps the same optical
             // proportion between rail and text.
             top: lineCount <= 1 ? "30%" : lineCount === 2 ? "24%" : "20%",
-            width: config.edgeAccentWidthPx * px,
+            width:
+              (isLightTheme
+                ? config.edgeAccentWidthPx * 0.72
+                : config.edgeAccentWidthPx) * px,
             height: lineCount <= 1 ? "40%" : lineCount === 2 ? "52%" : "60%",
             borderRadius: 999,
             opacity: accentReveal * config.edgeAccentOpacity * (1 - exit),
             transform: `scaleY(${accentReveal.toFixed(4)})`,
             transformOrigin: "center",
-            background: `linear-gradient(180deg, ${themePalette.highlight}, ${themePalette.primary})`,
-            boxShadow: `0 0 ${10 * px}px color-mix(in oklch, ${themePalette.highlight} 62%, transparent)`,
+            background: isLightTheme
+              ? `linear-gradient(180deg, ${themePalette.accent}, color-mix(in oklch, ${themePalette.accent} 52%, ${themePalette.vignette}))`
+              : `linear-gradient(180deg, ${themePalette.highlight}, ${themePalette.primary})`,
+            boxShadow: isLightTheme
+              ? `inset ${1 * px}px 0 0 rgba(255,255,255,0.3), 0 ${2 * px}px ${5 * px}px color-mix(in oklch, ${themePalette.vignette} 24%, transparent)`
+              : `0 0 ${10 * px}px color-mix(in oklch, ${themePalette.highlight} 62%, transparent)`,
           }}
         />
       )}

@@ -49,7 +49,7 @@ test("six semantic themes exist, each with a complete palette", () => {
   );
   assert.equal(
     hookBgPalettes.featured.accent,
-    "#7A315D",
+    "#8A315E",
     "featured emphasis needs a dark chromatic accent over the pearl surface",
   );
 });

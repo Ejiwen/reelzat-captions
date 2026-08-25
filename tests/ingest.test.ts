@@ -131,6 +131,24 @@ test("authored display windows convert to frames exactly once, at ingest", () =>
   });
 });
 
+test("timed nameplate choreography is opt-in and survives authoring ingest", () => {
+  const fixed = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring(),
+  });
+  const adaptive = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring({ nameplateAvoidance: true }),
+  });
+
+  assert.equal(fixed.authored?.nameplateAvoidance, false);
+  assert.equal(adaptive.authored?.nameplateAvoidance, true);
+});
+
 test("top/bottom 50/50 director splits resolve into timed frame windows", () => {
   const pkg = resolveReelPackage({
     clipId: "reel-x",
@@ -610,7 +628,57 @@ test("real reelzy v1 sidecar normalises into the canonical package", () => {
   assert.equal(cue?.endMs, 1220);
   // Centre-anchored face fractions → top-left percent rects.
   assert.deepEqual(pkg.director?.faces, [
-    { xPct: 22.5, yPct: 0, wPct: 55, hPct: 50 },
+    {
+      xPct: 22.5,
+      yPct: 0,
+      wPct: 55,
+      hPct: 50,
+      startMs: 0,
+      endMs: 26470,
+    },
+  ]);
+  assert.deepEqual(pkg.faceWindows, [
+    {
+      xPct: 22.5,
+      yPct: 0,
+      wPct: 55,
+      hPct: 50,
+      startFrame: 0,
+      endFrame: 794,
+    },
+  ]);
+});
+
+test("estimated rich-director faces survive ingest for conservative avoidance", () => {
+  const pkg = resolveReelPackage({
+    clipId: "reel-estimated",
+    packageDir: "reels/reel-estimated",
+    sidecar: validSidecar({
+      authoring: validAuthoring({ clipId: "reel-estimated" }),
+    }),
+    director: {
+      faces: [
+        {
+          boxNorm: { x: 0.4067, y: 0.18, w: 0.1867, h: 0.14 },
+          t0: 0,
+          t1: 22,
+          estimated: true,
+        },
+      ],
+      textSafeZones: [],
+      cuts: [],
+    },
+  });
+  assert.deepEqual(pkg.faceWindows, [
+    {
+      xPct: 40.67,
+      yPct: 18,
+      wPct: 18.67,
+      hPct: 14,
+      estimated: true,
+      startFrame: 0,
+      endFrame: 660,
+    },
   ]);
 });
 
@@ -681,4 +749,14 @@ test("reel-001 fixture matches the acceptance choreography", () => {
   assert.deepEqual(long?.window, { startFrame: 480, endFrame: 630 });
   assert.equal(pkg.asr.words.length, 13);
   assert.equal(pkg.director?.faces.length, 1);
+  assert.deepEqual(pkg.faceWindows, [
+    {
+      xPct: 30,
+      yPct: 18,
+      wPct: 40,
+      hPct: 30,
+      startFrame: 0,
+      endFrame: 660,
+    },
+  ]);
 });

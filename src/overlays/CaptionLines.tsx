@@ -173,15 +173,18 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
       ? mixOklch(themePalette.foreground, themePalette.accent, 0.28)
       : verseInk;
 
-  // Scaled with the type, so the halo looks identical at every fitted size.
-  const inkShadow = theme
-    ? [
-        themePalette.surface === "light"
-          ? `0 1px 0 rgba(255,255,255,0.9)`
-          : `0 ${(fontSize * 0.03).toFixed(1)}px ${(fontSize * 0.17).toFixed(1)}px rgba(0,0,0,0.55)`,
-        `0 0 ${(fontSize * 0.45).toFixed(1)}px color-mix(in oklch, ${themePalette.vignette} ${themePalette.surface === "light" ? 18 : 30}%, transparent)`,
-      ].join(", ")
-    : textShadow;
+  // Light cards already provide a controlled contrast field. Any highlight
+  // behind their dark ink reads as a moving white duplicate once the words
+  // animate, so featured typography is deliberately shadow-free.
+  const inkShadow =
+    themePalette.surface === "light"
+      ? "none"
+      : theme
+        ? [
+            `0 ${(fontSize * 0.03).toFixed(1)}px ${(fontSize * 0.17).toFixed(1)}px rgba(0,0,0,0.55)`,
+            `0 0 ${(fontSize * 0.45).toFixed(1)}px color-mix(in oklch, ${themePalette.vignette} 30%, transparent)`,
+          ].join(", ")
+        : textShadow;
 
   // One stagger for the whole block, so a long caption lands as fast as a
   // short one — the words simply follow each other more closely.
@@ -255,10 +258,9 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
               )(themePalette.surface === "light" ? 1 : 0.8);
               style.fontWeight = 800;
               style.textShadow =
-                themePalette.surface === "light"
-                  ? `0 1px 0 rgba(255,255,255,0.78), 0 0 ${(fontSize * 0.16).toFixed(1)}px color-mix(in oklch, ${themePalette.accent} 14%, transparent)`
-                  : undefined;
-              style.transform = `${style.transform ?? ""} scale(${themePalette.surface === "light" ? 1.04 : 1.03})`.trim();
+                themePalette.surface === "light" ? "none" : undefined;
+              style.transform =
+                `${style.transform ?? ""} scale(${themePalette.surface === "light" ? 1.04 : 1.03})`.trim();
             }
             return <Word key={wordIndex} text={word} style={style} />;
           })}

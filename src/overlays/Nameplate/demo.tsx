@@ -12,6 +12,8 @@ export const NameplateDemo: React.FC = () => (
       window={fixture.window}
       position={fixture.position as OverlayPosition}
       direction={fixture.direction as TextDirection}
+      theme="featured"
+      animated
     />
   </DemoStage>
 );

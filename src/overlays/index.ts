@@ -38,6 +38,14 @@ export {
 } from "./CaptionEnergy";
 export { Nameplate, type NameplateProps } from "./Nameplate";
 export {
+  nameplateAvoidanceConfig,
+  nameplatePlacementAtFrame,
+  rawNameplatePlacementAtFrame,
+  type NameplateAvoidanceConfig,
+  type NameplateAvoidanceLayout,
+  type NameplatePlacement,
+} from "./Nameplate/placement";
+export {
   MidReelCta,
   findMidReelCtaWindow,
   midReelCtaConfig,
