@@ -178,6 +178,35 @@ test("top/bottom 50/50 director splits resolve into timed frame windows", () => 
   ]);
 });
 
+test("top/bottom 65/35 director splits place captions on the moved seam", () => {
+  const pkg = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring(),
+    director: {
+      splitScreen: {
+        used: true,
+        orientation: "vertical",
+        divider: { norm: { x: 0, y: 0.649, w: 1, h: 0.002 } },
+        panels: [
+          { output: { norm: { x: 0, y: 0, w: 1, h: 0.65 } } },
+          { output: { norm: { x: 0, y: 0.65, w: 1, h: 0.35 } } },
+        ],
+        segments: ["seg-002"],
+      },
+      segments: [
+        { id: "seg-001", t0: 0, t1: 3, mode: "single_medium" },
+        { id: "seg-002", t0: 3, t1: 13.25, mode: "two_person_split" },
+      ],
+    },
+  });
+
+  assert.deepEqual(pkg.splitScreenWindows, [
+    { startFrame: 90, endFrame: 397, centerYPct: 65 },
+  ]);
+});
+
 test("left/right splits never move captions to the middle seam", () => {
   const pkg = resolveReelPackage({
     clipId: "reel-x",

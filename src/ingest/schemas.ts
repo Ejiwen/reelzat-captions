@@ -444,20 +444,36 @@ export const normalizeDirector = (data: unknown): unknown => {
           : null;
       })
       .filter((norm): norm is Record<string, unknown> => norm !== null);
-    const isTopBottomHalf =
-      panelNorms.length === 2 &&
-      panelNorms.every(
+    const stackedPanelNorms = panelNorms
+      .filter(
         (norm) =>
           typeof norm["x"] === "number" &&
           typeof norm["y"] === "number" &&
           typeof norm["w"] === "number" &&
-          typeof norm["h"] === "number" &&
-          Math.abs(norm["x"]) <= 0.02 &&
-          Math.abs(norm["w"] - 1) <= 0.02 &&
-          Math.abs(norm["h"] - 0.5) <= 0.03,
+          typeof norm["h"] === "number",
+      )
+      .sort((a, b) => (a["y"] as number) - (b["y"] as number));
+    const topPanel = stackedPanelNorms[0];
+    const bottomPanel = stackedPanelNorms[1];
+    const isTopBottomHalf =
+      stackedPanelNorms.length === 2 &&
+      topPanel !== undefined &&
+      bottomPanel !== undefined &&
+      stackedPanelNorms.every(
+        (norm) =>
+          Math.abs(norm["x"] as number) <= 0.02 &&
+          Math.abs((norm["w"] as number) - 1) <= 0.02 &&
+          (norm["h"] as number) > 0.02,
       ) &&
-      panelNorms.some((norm) => Math.abs((norm["y"] as number) - 0) <= 0.03) &&
-      panelNorms.some((norm) => Math.abs((norm["y"] as number) - 0.5) <= 0.03);
+      Math.abs(topPanel["y"] as number) <= 0.03 &&
+      Math.abs(
+        (topPanel["y"] as number) +
+          (topPanel["h"] as number) -
+          (bottomPanel["y"] as number),
+      ) <= 0.03 &&
+      Math.abs(
+        (bottomPanel["y"] as number) + (bottomPanel["h"] as number) - 1,
+      ) <= 0.03;
 
     if (isTopBottomHalf) {
       const divider = split["divider"];
