@@ -7,6 +7,7 @@ import {
   CaptionEnergyBridge,
   CaptionRegular,
   CaptionShort,
+  CaptionWords,
   Hook,
   MidReelCta,
   Nameplate,
@@ -19,6 +20,7 @@ import {
   type OverlayTextZone,
   type TimelineItem,
   outroConfig,
+  wordsReaderWindow,
 } from "../overlays";
 import { hookConfig } from "../overlays/Hook/config";
 import { resolveHookBgTheme } from "../overlays/HookBg/themes";
@@ -86,7 +88,17 @@ export const AuthoredReel: React.FC<AuthoredReelProps> = (props) => {
       endFrame: Math.min(effectiveHookEnd, Math.round(1.8 * fps)),
       gain: soundIdentityConfig.hookDuckGain,
     });
-    captions.forEach((caption) =>
+    const captionSoundCues =
+      pkg.authored.captionStyle === "words" && captions.length > 0
+        ? [
+            captions.reduce((first, caption) =>
+              caption.window.startFrame < first.window.startFrame
+                ? caption
+                : first,
+            ),
+          ]
+        : captions;
+    captionSoundCues.forEach((caption) =>
       duckWindows.push({
         startFrame: caption.window.startFrame,
         endFrame: Math.min(
@@ -156,6 +168,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   hookAnimation,
   captionAnimation,
   hookBgTheme,
+  captionWordsMode,
   reduced,
   debug,
 }) => {
@@ -175,6 +188,13 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
   }
 
   const { hook, captions } = authored;
+  const wordsWindow =
+    authored.captionStyle === "words"
+      ? wordsReaderWindow(captions, videoDurationInFrames)
+      : null;
+  const captionDisplayWindows = wordsWindow
+    ? [wordsWindow]
+    : captions.map((caption) => caption.window);
 
   // Keep the entrance and exit timings untouched; extend only the steady
   // hold between them. Stop before the next authored caption so overlays do
@@ -229,9 +249,11 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
     fallback: hookConfig.background.defaultTheme,
   });
 
-  const bottomCaptionWindows = captions
-    .filter((c) => c.position === "bottom")
-    .map((c) => c.window);
+  const bottomCaptionWindows = wordsWindow
+    ? [wordsWindow]
+    : captions
+        .filter((c) => c.position === "bottom")
+        .map((c) => c.window);
 
   // This lower-third identity moment may coexist with captions: their spatial
   // zones are independent, so keep the CTA truly centred in reel time.
@@ -279,14 +301,14 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
           direction={pkg.direction}
           reduced={reduced}
           interactionWindows={[
-            ...captions.map((caption) => caption.window),
+            ...captionDisplayWindows,
             ...(midReelCtaWindow ? [midReelCtaWindow] : []),
           ]}
           theme={resolvedHookBgTheme}
           progressDurationInFrames={videoDurationInFrames}
         />
       </Sequence>
-      {mode === "burn" ? (
+      {mode === "burn" && !wordsWindow ? (
         <CaptionScrim
           windows={bottomCaptionWindows}
           bottomPct={pkg.safeArea.bottomPct}
@@ -304,7 +326,22 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
           fontScale={fontScale}
         />
       ) : null}
-      {captions.map((caption, i) => (
+      {wordsWindow ? (
+        <CaptionWords
+            captions={captions}
+            window={wordsWindow}
+            position="bottom"
+            direction={pkg.direction}
+            animation={captionAnimation ?? undefined}
+            safeArea={pkg.safeArea}
+            textZone={zoneFor(pkg, "bottom")}
+            splitWindows={pkg.splitScreenWindows}
+            fontScale={fontScale}
+            reduced={reduced}
+            theme={resolvedHookBgTheme}
+            revealMode={captionWordsMode}
+          />
+      ) : captions.map((caption, i) => (
         <React.Fragment key={i}>
           <CaptionEnergyBridge
             window={caption.window}
@@ -323,6 +360,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
             animation={captionAnimation}
             reduced={reduced}
             theme={resolvedHookBgTheme}
+            wordFocus={false}
           />
         </React.Fragment>
       ))}
@@ -374,7 +412,7 @@ const OverlayStack: React.FC<AuthoredReelProps & { pkg: ReelPackage }> = ({
       {mode === "burn" ? (
         <SoundIdentity
           hookWindow={hookWindow}
-          captionWindows={captions.map((caption) => caption.window)}
+          captionWindows={captionDisplayWindows}
           ctaWindow={midReelCtaWindow}
           outroStartFrame={outroConfig.enabled ? videoDurationInFrames : null}
         />
@@ -400,7 +438,8 @@ const AuthoredCaption: React.FC<{
   animation: AuthoredReelProps["captionAnimation"];
   reduced: boolean;
   theme: ReturnType<typeof resolveHookBgTheme>;
-}> = ({ caption, pkg, fontScale, animation, reduced, theme }) => {
+  wordFocus: boolean;
+}> = ({ caption, pkg, fontScale, animation, reduced, theme, wordFocus }) => {
   const shared = {
     window: caption.window,
     position: caption.position,
@@ -437,6 +476,7 @@ const AuthoredCaption: React.FC<{
             verse: caption.verse,
             emphasis: caption.emphasis,
           }}
+          wordFocus={wordFocus}
           {...shared}
         />
       );

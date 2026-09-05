@@ -19,6 +19,9 @@ export const authoredReelProps = z.object({
   // Studio override for the HookBg editorial theme. null → the package's
   // hook.backgroundTheme, then keyword fallback, then the configured default.
   hookBgTheme: z.enum(HOOK_BG_THEMES).nullable(),
+  // Words template only: reveal each word at its onset (default) or show
+  // the whole phrase and highlight the spoken word. null → config default.
+  captionWordsMode: z.enum(["reveal", "phrase"]).nullable(),
   reduced: z.boolean(),
   debug: z.boolean(),
 });
@@ -31,6 +34,7 @@ export const defaultAuthoredReelProps: Omit<AuthoredReelProps, "packageDir" | "c
   hookAnimation: null,
   captionAnimation: null,
   hookBgTheme: null,
+  captionWordsMode: null,
   reduced: false,
   debug: false,
 };

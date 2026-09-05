@@ -12,6 +12,8 @@ import {
 import { DEFAULT_SAFE_AREA } from "../src/overlays/types";
 import {
   activeAuthoredWordIndex,
+  exactActiveAuthoredWordIndex,
+  wordsTemplateWordStyle,
   isAuthoredWordEmphasised,
 } from "../src/overlays/CaptionLines";
 import { captionSplitPlacementAtFrame } from "../src/overlays/captionSplitPlacement";
@@ -317,4 +319,27 @@ test("authored active word index follows frame timings", () => {
   assert.equal(activeAuthoredWordIndex(9, words), -1);
   assert.equal(activeAuthoredWordIndex(20, words), 1);
   assert.equal(activeAuthoredWordIndex(35, words), 2);
+  assert.equal(exactActiveAuthoredWordIndex(20, words), 1);
+  assert.equal(exactActiveAuthoredWordIndex(45, words), -1);
+});
+
+test("words template gives only the spoken word the full gold glow", () => {
+  const timing = { startFrame: 10, endFrame: 20 };
+  const active = wordsTemplateWordStyle({
+    frame: 14,
+    fps: 30,
+    timing,
+    isActive: true,
+    isPast: false,
+  });
+  const waiting = wordsTemplateWordStyle({
+    frame: 5,
+    fps: 30,
+    timing,
+    isActive: false,
+    isPast: false,
+  });
+  assert.match(String(active.textShadow), /242,201,76,0\.86/);
+  assert.equal(active.opacity, 1);
+  assert.equal(waiting.opacity, 0.46);
 });

@@ -17,6 +17,7 @@ import {
 import {
   CaptionRegularDemo,
   CaptionRegularVerseDemo,
+  CaptionRegularWordsDemo,
 } from "./overlays/CaptionRegular/demo";
 import {
   CaptionShortDemo,
@@ -236,6 +237,11 @@ export const RemotionRoot: React.FC = () => {
         <Composition
           id="CaptionRegular-Verse"
           component={CaptionRegularVerseDemo}
+          {...DEMO}
+        />
+        <Composition
+          id="CaptionRegular-Words"
+          component={CaptionRegularWordsDemo}
           {...DEMO}
         />
         <Composition

@@ -88,6 +88,11 @@ export const authoredCaptionSchema = z.object({
     .array(z.string().min(1, "emphasis word must not be empty"))
     .max(2)
     .optional(),
+  // Provenance of `words[]` timing. "aligned" (or missing) means real
+  // onset timestamps; "distributed" means the emitter spread the caption
+  // window evenly because it could not align tokens — the words template
+  // then shows the phrase without a spoken-word highlight.
+  wordTiming: z.enum(["aligned", "distributed"]).optional(),
 });
 
 export const authoringSchema = z.object({
@@ -101,6 +106,9 @@ export const authoringSchema = z.object({
   // Opt-in because older packages keep the copyright rail fixed throughout;
   // enabled packages use the 13-second opening + 7-second closing timeline.
   nameplateAvoidance: z.boolean().default(false),
+  // Caption-only presentation template. Missing keeps every existing
+  // package pixel-compatible with the established treatment.
+  captionStyle: z.enum(["default", "words"]).default("default"),
   source: authoringSourceSchema,
   hook: authoredHookSchema,
   captions: z.array(authoredCaptionSchema).default([]),

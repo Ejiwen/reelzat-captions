@@ -29,6 +29,15 @@ export { CaptionShort, type CaptionShortProps } from "./CaptionShort";
 export { CaptionLong, type CaptionLongProps } from "./CaptionLong";
 export { CaptionRegular, type CaptionRegularProps } from "./CaptionRegular";
 export {
+  CaptionWords,
+  captionWordsConfig,
+  wordsCaptionPairAtFrame,
+  wordsReaderWindow,
+  type CaptionWordsConfig,
+  type CaptionWordsProps,
+  type WordsCaptionPair,
+} from "./CaptionWords";
+export {
   CaptionEnergyBridge,
   CaptionEnergySurface,
   captionEnergyConfig,

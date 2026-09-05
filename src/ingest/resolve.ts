@@ -74,6 +74,9 @@ export type ResolvedAuthoredCaption = {
   words?: ResolvedAuthoredWord[];
   verse: boolean;
   emphasis?: string[];
+  // true when `words` timing was synthesised upstream (authoring.json
+  // wordTiming: "distributed") rather than measured from speech.
+  wordTimingSynthesized?: boolean;
 };
 
 export type ResolvedAuthoredWord = {
@@ -87,6 +90,7 @@ export type ResolvedAuthoring = {
   channel: string;
   episodeTitle: string;
   nameplateAvoidance: boolean;
+  captionStyle: Authoring["captionStyle"];
   hook: ResolvedHook;
   captions: ResolvedAuthoredCaption[];
   publish: Authoring["publish"] | null;
@@ -496,6 +500,7 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
         channel: authoring.source.channel,
         episodeTitle: authoring.source.episodeTitle,
         nameplateAvoidance: authoring.nameplateAvoidance,
+        captionStyle: authoring.captionStyle,
         hook: {
           text: authoring.hook.text,
           position: authoring.hook.position,
@@ -517,6 +522,9 @@ export const resolveReelPackage = (input: ReelPackageInput): ReelPackage => {
           })),
           verse: caption.verse,
           emphasis: caption.emphasis,
+          ...(caption.wordTiming === "distributed"
+            ? { wordTimingSynthesized: true }
+            : {}),
         })),
         publish: authoring.publish ?? null,
       }

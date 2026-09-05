@@ -1,5 +1,18 @@
 {
   "schemaVersion": 1,
   "sourceDir": "public/reels",
-  "reels": []
+  "reels": [
+    {
+      "id": "reel-001",
+      "dir": "reels/reel-001",
+      "kind": "reel",
+      "captionSource": "authored",
+      "title": "الوسواس الذي كاد يمرضه وبيتٌ شفاه",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "durationInFrames": 1257,
+      "direction": "rtl"
+    }
+  ]
 }

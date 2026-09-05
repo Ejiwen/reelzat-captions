@@ -28,6 +28,7 @@ export type CaptionRegularProps = OverlayBaseProps & {
     verse?: boolean;
   };
   stagger?: boolean;
+  wordFocus?: boolean;
   theme?: HookBgTheme;
 };
 
@@ -45,6 +46,7 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
   splitWindows = [],
   fontScale = 1,
   stagger = true,
+  wordFocus = false,
   reduced,
   theme,
 }) => {
@@ -148,6 +150,7 @@ export const CaptionRegular: React.FC<CaptionRegularProps> = ({
           reduced={reduced}
           theme={theme}
           words={data.words}
+          wordFocus={wordFocus}
           emphasis={data.emphasis}
           verse={data.verse}
         />

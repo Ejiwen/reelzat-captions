@@ -34,6 +34,8 @@ type CaptionLinesProps = {
   // hook background and the card underneath.
   theme?: HookBgTheme;
   words?: AuthoredWordFrameTiming[];
+  // Gold, speech-synchronised treatment used only by the words template.
+  wordFocus?: boolean;
   emphasis?: string[];
   verse?: boolean;
 };
@@ -65,6 +67,14 @@ export const activeAuthoredWordIndex = (
   }
   return active;
 };
+
+export const exactActiveAuthoredWordIndex = (
+  frame: number,
+  words: AuthoredWordFrameTiming[],
+): number =>
+  words.findIndex(
+    (word) => frame >= word.startFrame && frame < word.endFrame,
+  );
 
 const verseInk = mixOklch(palette.ink, palette.gold, 0.35);
 const verseAccentRamp = oklchRamp([verseInk, palette.gold]);
@@ -146,6 +156,70 @@ export const authoredKaraokeWordStyle = ({
   };
 };
 
+export const wordsTemplateWordStyle = ({
+  frame,
+  fps,
+  timing,
+  isActive,
+  isPast,
+}: {
+  frame: number;
+  fps: number;
+  timing: AuthoredWordFrameTiming;
+  isActive: boolean;
+  isPast: boolean;
+}): React.CSSProperties => {
+  const transition = Math.max(1, Math.round(fps * 0.12));
+  const life = interpolate(
+    frame,
+    [timing.startFrame, timing.startFrame + transition],
+    [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+  );
+  const release = interpolate(
+    frame,
+    [timing.endFrame, timing.endFrame + transition],
+    [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+  );
+  const activeScale = isActive
+    ? 1 +
+      0.038 *
+        spring({
+          frame: Math.max(0, frame - timing.startFrame),
+          fps,
+          config: springs.enter,
+        })
+    : 1;
+  const gold = "#F2C94C";
+  const warmInk = "#FFF6D6";
+  const restingInk = "#D6D3CB";
+
+  return {
+    color: isActive
+      ? mixOklch(restingInk, gold, life)
+      : isPast || release > 0
+        ? warmInk
+        : restingInk,
+    opacity: isActive ? 1 : isPast ? 0.94 : 0.46,
+    fontWeight: isActive ? 800 : 700,
+    transform: `scale(${activeScale})`,
+    WebkitTextStroke: isActive
+      ? "0.25px rgba(255,239,174,0.22)"
+      : "0.45px rgba(0,0,0,0.42)",
+    textShadow: isActive
+      ? [
+          "0 0 8px rgba(242,201,76,0.86)",
+          "0 0 20px rgba(242,201,76,0.52)",
+          "0 0 38px rgba(242,201,76,0.24)",
+          "0 3px 10px rgba(0,0,0,0.68)",
+        ].join(", ")
+      : isPast
+        ? "0 0 14px rgba(242,201,76,0.18), 0 3px 10px rgba(0,0,0,0.62)"
+        : "0 3px 10px rgba(0,0,0,0.58)",
+  };
+};
+
 export const CaptionLines: React.FC<CaptionLinesProps> = ({
   lines,
   fontSize,
@@ -157,6 +231,7 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
   wrap = false,
   theme,
   words,
+  wordFocus = false,
   emphasis,
   verse = false,
 }) => {
@@ -191,7 +266,11 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
   const staggerFrames = wordStaggerFrames(
     lines.reduce((count, line) => count + line.length, 0),
   );
-  const activeWordIndex = words ? activeAuthoredWordIndex(frame, words) : -1;
+  const activeWordIndex = words
+    ? wordFocus
+      ? exactActiveAuthoredWordIndex(frame, words)
+      : activeAuthoredWordIndex(frame, words)
+    : -1;
 
   let flatIndex = -1;
 
@@ -228,7 +307,15 @@ export const CaptionLines: React.FC<CaptionLinesProps> = ({
             const isEmphasised = isAuthoredWordEmphasised(word, emphasis);
             const timing = words?.[flatIndex];
             const style = timing
-              ? authoredKaraokeWordStyle({
+              ? wordFocus
+                ? wordsTemplateWordStyle({
+                    frame,
+                    fps,
+                    timing,
+                    isActive: flatIndex === activeWordIndex,
+                    isPast: frame >= timing.endFrame,
+                  })
+                : authoredKaraokeWordStyle({
                   frame,
                   fps,
                   timing,

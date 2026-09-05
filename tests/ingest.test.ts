@@ -5,6 +5,10 @@ import { discoverReels, loadReelPackageFromDisk } from "../src/ingest/node";
 import { resolveReelPackage, secondsToFrames } from "../src/ingest/resolve";
 import { authoredCaptionSchema } from "../src/ingest/schemas";
 import {
+  wordsCaptionPairAtFrame,
+  wordsReaderWindow,
+} from "../src/overlays/CaptionWords";
+import {
   captionBottomOffsetAboveProgressPx,
   facebookSafeRegionBottomPct,
   facebookSafeRegionBottomPx,
@@ -291,6 +295,50 @@ test("regular authored word seconds resolve to frames and metadata is retained",
   ]);
   assert.deepEqual(pkg.authored?.captions[0]?.emphasis, ["بالسؤال"]);
   assert.equal(pkg.authored?.captions[0]?.verse, false);
+});
+
+test("words caption style round-trips and defaults without changing old packages", () => {
+  const wordsPackage = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring({ captionStyle: "words" }),
+  });
+  const defaultPackage = resolveReelPackage({
+    clipId: "reel-x",
+    packageDir: "reels/reel-x",
+    sidecar: validSidecar(),
+    authoring: validAuthoring(),
+  });
+  assert.equal(wordsPackage.authored?.captionStyle, "words");
+  assert.equal(defaultPackage.authored?.captionStyle, "default");
+});
+
+test("words reader stays mounted and retains the preceding caption", () => {
+  const captions = [
+    {
+      type: "regular" as const,
+      lines: ["الأول"],
+      position: "bottom" as const,
+      window: { startFrame: 30, endFrame: 60 },
+      verse: false,
+    },
+    {
+      type: "regular" as const,
+      lines: ["الثاني"],
+      position: "bottom" as const,
+      window: { startFrame: 120, endFrame: 150 },
+      verse: false,
+    },
+  ];
+  assert.deepEqual(wordsReaderWindow(captions, 300), {
+    startFrame: 30,
+    endFrame: 300,
+  });
+  assert.equal(wordsCaptionPairAtFrame(captions, 29), null);
+  assert.equal(wordsCaptionPairAtFrame(captions, 80)?.current.lines[0], "الأول");
+  assert.equal(wordsCaptionPairAtFrame(captions, 130)?.previous?.lines[0], "الأول");
+  assert.equal(wordsCaptionPairAtFrame(captions, 130)?.current.lines[0], "الثاني");
 });
 
 test("2.2 Arabic normalization accepts diacritics in words and emphasis", () => {
